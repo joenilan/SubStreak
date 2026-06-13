@@ -24,6 +24,8 @@
     "release:publish": "bun run release:windows && node ./scripts/publish-release.mjs"
   },
   "dependencies": {
+    "@fontsource/saira": "^5.2.11",
+    "@fontsource/saira-condensed": "^5.2.8",
     "@tauri-apps/api": "^2.1.1",
     "@tauri-apps/plugin-process": "^2.0.1",
     "@tauri-apps/plugin-updater": "^2.3.0",
