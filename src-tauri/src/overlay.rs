@@ -69,6 +69,10 @@ pub async fn serve(state: OverlayState, std_listener: StdTcpListener) {
 
     let app = Router::new()
         .route("/", get(|| async { Html(OVERLAY_HTML) }))
+        .route("/fonts/scond-300.woff2", get(|| font(include_bytes!("../fonts/scond-300.woff2"))))
+        .route("/fonts/scond-500.woff2", get(|| font(include_bytes!("../fonts/scond-500.woff2"))))
+        .route("/fonts/saira-400.woff2", get(|| font(include_bytes!("../fonts/saira-400.woff2"))))
+        .route("/fonts/saira-600.woff2", get(|| font(include_bytes!("../fonts/saira-600.woff2"))))
         .route(
             "/state",
             get(move || {
@@ -91,4 +95,14 @@ pub async fn serve(state: OverlayState, std_listener: StdTcpListener) {
         return;
     };
     let _ = axum::serve(listener, app).await;
+}
+
+async fn font(bytes: &'static [u8]) -> impl axum::response::IntoResponse {
+    (
+        [
+            (header::CONTENT_TYPE, "font/woff2"),
+            (header::CACHE_CONTROL, "public, max-age=31536000, immutable"),
+        ],
+        bytes,
+    )
 }

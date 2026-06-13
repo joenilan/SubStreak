@@ -14,6 +14,7 @@ function isNativeRuntime() {
 export function useOverlaySync(): { overlayUrl: string } {
   const config = useSubStreakStore((s) => s.config)
   const streak = useSubStreakStore((s) => s.streak)
+  const overlay = useSubStreakStore((s) => s.overlay)
   const [overlayUrl, setOverlayUrl] = useState('')
 
   // Resolve the loopback URL once the server is up.
@@ -35,21 +36,23 @@ export function useOverlaySync(): { overlayUrl: string } {
     }
   }, [])
 
-  // Push payload on every change.
+  // Push data + settings on every change.
   useEffect(() => {
     if (!isNativeRuntime()) return
     const view = getDisplay(streak, config)
     const payload = JSON.stringify({
       current: Math.min(view.rawCount, view.target),
       target: view.target,
+      remaining: Math.max(0, view.target - view.rawCount),
       pct: Math.min(100, Math.round((view.rawCount / view.target) * 100)),
       goalHit: view.goalHitToday,
       streak: view.streak,
       best: view.longestStreak,
       live: view.liveToday,
+      settings: overlay,
     })
     invoke('update_overlay_state', { payload }).catch(() => {})
-  }, [config, streak])
+  }, [config, streak, overlay])
 
   return { overlayUrl }
 }
