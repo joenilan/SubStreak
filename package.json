@@ -12,7 +12,16 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "tauri:build:windows": "tauri build --bundles msi,nsis"
+    "tauri:build:windows": "tauri build --bundles msi,nsis",
+    "version:check": "node ./scripts/version.mjs check",
+    "version:check-notes": "node ./scripts/version.mjs check-notes",
+    "version:sync": "node ./scripts/version.mjs sync",
+    "version:set": "node ./scripts/version.mjs set",
+    "version:patch": "node ./scripts/version.mjs patch",
+    "version:minor": "node ./scripts/version.mjs minor",
+    "version:major": "node ./scripts/version.mjs major",
+    "release:windows": "bun run tauri:build:windows && node ./scripts/package-release.mjs",
+    "release:publish": "bun run release:windows && node ./scripts/publish-release.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.1.1",
@@ -24,6 +33,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.1.0",
+    "ssh2-sftp-client": "^11.0.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

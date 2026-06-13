@@ -105,17 +105,23 @@ Shared-session P2P, the spin wheel + moderation scopes, tip providers, multi-lad
    - Native storage: `src-tauri/src/twitch_session.rs` (Windows DPAPI, keyring fallback) + `src/lib/platform/nativeTwitchSession.ts`.
    - `src/hooks/useTwitchAuth.ts`: bootstrap from storage, device-code login UI, refresh ~5min early, hourly validate, logout. Client ID from `VITE_TWITCH_CLIENT_ID` (`.env`, gitignored).
 6. ✅ EventSub ingestion (`src/hooks/useEventSub.ts`): subscribes to `channel.subscribe` / `channel.subscription.gift` / `channel.subscription.message` / `stream.online`, dedupes by `message_id`, normalizes (`normalizeSubEvent.ts`), feeds the streak store's `ingest()`. Helix live poll on launch. Auto-reconnect.
-7. Port version/release/updater pipeline; **new signing keypair**; `.env.raspi` with `RELEASE_APP_SLUG=substreak`; add `plugins.updater` to `tauri.conf.json`.
+7. ✅ Release/updater pipeline ported (`scripts/version.mjs`, `package-release.mjs`, `publish-release.mjs`; `VERSION`, `CHANGELOG.md`, `PATCH_NOTES.md`; `version:*` + `release:*` package scripts). New signing keypair generated at `~/.tauri/substreak.key`; pubkey + endpoint wired into `tauri.conf.json`. Publisher reuses the shared `../../.env.raspi` for SSH creds and overlays the local `.env` for the substreak slug + signing key. **Not yet run end-to-end** — needs a real `bun run release:publish` (full Tauri build + SFTP upload).
 8. Replace the streak store's localStorage with native file persistence (DPAPI not needed — it's not secret); on launch poll live status + `tick` to finalize.
 9. OBS overlay served from a loopback route.
 10. Real `release:publish`; confirm auto-update end-to-end.
 
+### Website note
+Publishing uploads to `…/downloads/substreak/` and writes `updater.json` + `latest.json` there.
+Auto-update needs **only** `updater.json` at that URL — no website code change required. The
+human-facing downloads page would need a new SubStreak card/section only if you want a download
+button listed there.
+
 ### Status note
-Phases 1–6 are done and verified to **build** (front end `bun run build`, native `cargo check`,
-12/12 engine tests). The app is feature-complete enough to run end-to-end: connect Twitch
-(device code), go live, and watch real subs drive the daily goal + streak. Not yet runtime-tested
-against live Twitch events — needs a `bun run tauri:dev` session + a real sub/test event.
-Remaining: release pipeline (7), native persistence of streak state (8), OBS overlay (9).
+Phases 1–7 are done and verified to **build** (front end `bun run build`, native `cargo check`,
+12/12 engine tests, `version:check` + `version:check-notes` green). The app runs end-to-end in
+principle: connect Twitch (device code), go live, watch real subs drive the daily goal + streak.
+Not yet runtime-tested against live Twitch events or a real publish. Remaining: native persistence
+of streak state (8), OBS overlay (9), first real publish (10).
 
 ---
 
