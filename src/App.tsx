@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { getDisplay } from './lib/streak/engine'
+import { isTwitchConfigured } from './lib/twitch/constants'
 import { useSubStreakStore } from './state/useSubStreakStore'
+import { useTwitchStore } from './state/useTwitchStore'
+import { useTwitchAuth } from './hooks/useTwitchAuth'
+import { useEventSub } from './hooks/useEventSub'
 
 export function App() {
   const config = useSubStreakStore((s) => s.config)
@@ -11,6 +15,14 @@ export function App() {
   const setTarget = useSubStreakStore((s) => s.setTarget)
   const setRolloverHour = useSubStreakStore((s) => s.setRolloverHour)
   const hardReset = useSubStreakStore((s) => s.hardReset)
+
+  const { login, cancelLogin, logout } = useTwitchAuth()
+  useEventSub()
+  const twitchStatus = useTwitchStore((s) => s.status)
+  const session = useTwitchStore((s) => s.session)
+  const deviceFlow = useTwitchStore((s) => s.deviceFlow)
+  const twitchError = useTwitchStore((s) => s.error)
+  const eventSubConnected = useTwitchStore((s) => s.eventSubConnected)
 
   const [panelOpen, setPanelOpen] = useState(false)
 
@@ -35,6 +47,18 @@ export function App() {
           {view.liveToday ? 'LIVE' : 'OFFLINE'}
         </span>
       </header>
+
+      {/* Twitch connection */}
+      <TwitchConnection
+        status={twitchStatus}
+        login={session?.login ?? null}
+        deviceFlow={deviceFlow}
+        error={twitchError}
+        eventSubConnected={eventSubConnected}
+        onLogin={() => void login()}
+        onCancel={cancelLogin}
+        onLogout={() => void logout()}
+      />
 
       {/* Daily sub goal */}
       <section className={`card goal ${view.goalHitToday ? 'goal--hit' : ''}`}>
@@ -95,7 +119,7 @@ export function App() {
             <span className="field__hint">Set ~5–6 so post-midnight streams stay one day.</span>
           </label>
 
-          <div className="panel__divider">Test (until Twitch is wired)</div>
+          <div className="panel__divider">Test (simulate events)</div>
           <div className="panel__actions">
             <button onClick={() => goLive()}>Go live</button>
             <button onClick={() => simulateSub(1)}>+1 sub</button>
@@ -109,5 +133,85 @@ export function App() {
 
       <footer className="app__footer">v{__APP_VERSION__} · runs in the tray</footer>
     </div>
+  )
+}
+
+interface TwitchConnectionProps {
+  status: string
+  login: string | null
+  deviceFlow: { userCode: string; verificationUri: string } | null
+  error: string | null
+  eventSubConnected: boolean
+  onLogin: () => void
+  onCancel: () => void
+  onLogout: () => void
+}
+
+function TwitchConnection({
+  status,
+  login,
+  deviceFlow,
+  error,
+  eventSubConnected,
+  onLogin,
+  onCancel,
+  onLogout,
+}: TwitchConnectionProps) {
+  if (!isTwitchConfigured()) {
+    return (
+      <section className="card twitch">
+        <div className="card__label">Twitch</div>
+        <div className="twitch__msg">Set VITE_TWITCH_CLIENT_ID in .env to enable login.</div>
+      </section>
+    )
+  }
+
+  if (status === 'authorizing' && deviceFlow) {
+    return (
+      <section className="card twitch">
+        <div className="card__label">Connect Twitch</div>
+        <div className="twitch__msg">
+          Go to{' '}
+          <a href={deviceFlow.verificationUri} target="_blank" rel="noreferrer">
+            {deviceFlow.verificationUri.replace(/^https?:\/\//, '')}
+          </a>{' '}
+          and enter:
+        </div>
+        <div className="twitch__code">{deviceFlow.userCode}</div>
+        <button className="twitch__btn" onClick={onCancel}>
+          Cancel
+        </button>
+      </section>
+    )
+  }
+
+  if (status === 'connected') {
+    return (
+      <section className="card twitch twitch--ok">
+        <div className="card__label">Twitch</div>
+        <div className="twitch__row">
+          <span>
+            Connected as <strong>{login}</strong>
+          </span>
+          <span className={`live-dot ${eventSubConnected ? 'live-dot--on' : ''}`}>
+            {eventSubConnected ? 'EVENTSUB' : 'CONNECTING'}
+          </span>
+        </div>
+        <button className="twitch__btn twitch__btn--ghost" onClick={onLogout}>
+          Sign out
+        </button>
+      </section>
+    )
+  }
+
+  const busy = status === 'bootstrapping' || status === 'refreshing'
+  return (
+    <section className="card twitch">
+      <div className="card__label">Twitch</div>
+      {error && <div className="twitch__msg twitch__msg--error">{error}</div>}
+      <button className="twitch__btn" disabled={busy} onClick={onLogin}>
+        {busy ? 'Working…' : 'Connect Twitch'}
+      </button>
+    </section>
   )
 }

@@ -17,6 +17,8 @@ use tauri::{
 };
 use tauri_plugin_dialog::DialogExt;
 
+mod twitch_session;
+
 /// Bring the main window back to the foreground.
 fn reveal_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -36,6 +38,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .invoke_handler(tauri::generate_handler![
+            twitch_session::load_native_twitch_session,
+            twitch_session::save_native_twitch_session,
+            twitch_session::clear_native_twitch_session,
+        ])
         .setup(|app| {
             // ── System tray ────────────────────────────────────────────────
             let open = MenuItemBuilder::with_id("open", "Open SubStreak").build(app)?;

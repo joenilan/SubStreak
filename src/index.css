@@ -276,6 +276,71 @@ body {
   border-color: rgba(239, 68, 68, 0.35);
 }
 
+/* Twitch connection */
+.twitch--ok {
+  border-color: rgba(124, 92, 255, 0.35);
+}
+
+.twitch__msg {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.twitch__msg--error {
+  color: #fca5a5;
+  margin-bottom: 10px;
+}
+
+.twitch__msg a {
+  color: var(--accent-2);
+}
+
+.twitch__code {
+  margin: 12px 0;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 6px;
+  font-variant-numeric: tabular-nums;
+  background: #0d0f16;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.twitch__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.twitch__btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), #9d7bff);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.twitch__btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.twitch__btn--ghost {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
 .app__footer {
   text-align: center;
   font-size: 11px;
