@@ -96,15 +96,21 @@ Shared-session P2P, the spin wheel + moderation scopes, tip providers, multi-lad
 ---
 
 ## 6. Build order
-1. ✅ Streak engine + tests.
-2. Scaffold a slim Tauri app (copy `../desktop` shell, strip to one page + one overlay route).
-3. Port version/release/updater pipeline; new signing keypair; `.env.raspi` with `RELEASE_APP_SLUG=substreak`.
-4. New Twitch app; wire device-code auth + native token storage + auto-refresh.
-5. EventSub: subs + `stream.online`; feed normalized events into `applyInput`.
-6. Persist state/config; on launch poll live status + `tick` to finalize.
-7. UI: daily goal section + streak section (somewhat polished). Overlay served from loopback.
-8. Tiny control: set goal target, set rollover hour, manual reset.
-9. Real `release:publish`; confirm auto-update end-to-end.
+1. ✅ Streak engine + tests (`src/lib/streak/`, 12/12).
+2. ✅ Slim Tauri shell scaffold (React + Vite + TS front end; `src-tauri` native side, `cargo check` green in ~44s).
+3. ✅ System tray / minimize-to-tray, ported from rocketsession (`src-tauri/src/lib.rs`): close + minimize hide to tray, tray menu (Open / Quit), double-click to restore, single-instance refocus, one-time "still running in tray" notice.
+4. ✅ Front-end UI: daily-goal section + streak section + settings/test panel (`src/App.tsx`, `src/index.css`), state via `src/state/useSubStreakStore.ts` (zustand + localStorage). Currently driven by dev/test buttons.
+5. Port version/release/updater pipeline; **new signing keypair**; `.env.raspi` with `RELEASE_APP_SLUG=substreak`; add `plugins.updater` to `tauri.conf.json`.
+6. New Twitch app; wire device-code auth + native token storage + auto-refresh.
+7. EventSub: subs + `stream.online`; feed normalized events into the store's `ingest()`.
+8. Replace localStorage with native persistence; on launch poll live status + `tick` to finalize.
+9. OBS overlay served from a loopback route.
+10. Real `release:publish`; confirm auto-update end-to-end.
+
+### Status note
+Phases 1–4 are done and verified. The app runs today as a tray-resident desktop window
+showing the daily goal + streak, exercisable via the test panel. Twitch wiring (6–7) is the
+next functional milestone; the release pipeline (5) can be ported in parallel.
 
 ---
 
