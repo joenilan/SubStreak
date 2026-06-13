@@ -5,6 +5,7 @@ import { useSubStreakStore } from './state/useSubStreakStore'
 import { useTwitchStore } from './state/useTwitchStore'
 import { useTwitchAuth } from './hooks/useTwitchAuth'
 import { useEventSub } from './hooks/useEventSub'
+import { useOverlaySync } from './hooks/useOverlaySync'
 
 export function App() {
   const config = useSubStreakStore((s) => s.config)
@@ -18,6 +19,7 @@ export function App() {
 
   const { login, cancelLogin, logout } = useTwitchAuth()
   useEventSub()
+  const { overlayUrl } = useOverlaySync()
   const twitchStatus = useTwitchStore((s) => s.status)
   const session = useTwitchStore((s) => s.session)
   const deviceFlow = useTwitchStore((s) => s.deviceFlow)
@@ -91,6 +93,8 @@ export function App() {
         <div className="streak__best">Best: {view.longestStreak}</div>
       </section>
 
+      {overlayUrl && <OverlayCard url={overlayUrl} />}
+
       <button className="panel-toggle" onClick={() => setPanelOpen((v) => !v)}>
         {panelOpen ? 'Hide controls' : 'Settings & test'}
       </button>
@@ -133,6 +137,28 @@ export function App() {
 
       <footer className="app__footer">v{__APP_VERSION__} · runs in the tray</footer>
     </div>
+  )
+}
+
+function OverlayCard({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    void navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <section className="card overlay-card">
+      <div className="card__label">OBS overlay</div>
+      <div className="overlay-card__row">
+        <code className="overlay-card__url">{url}</code>
+        <button className="overlay-card__copy" onClick={copy}>
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <div className="field__hint">Add a Browser source in OBS with this URL.</div>
+    </section>
   )
 }
 

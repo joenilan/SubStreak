@@ -17,6 +17,8 @@ use tauri::{
 };
 use tauri_plugin_dialog::DialogExt;
 
+mod app_state;
+mod overlay;
 mod twitch_session;
 
 /// Bring the main window back to the foreground.
@@ -42,8 +44,29 @@ pub fn run() {
             twitch_session::load_native_twitch_session,
             twitch_session::save_native_twitch_session,
             twitch_session::clear_native_twitch_session,
+            app_state::load_substreak_state,
+            app_state::save_substreak_state,
+            app_state::clear_substreak_state,
+            overlay::update_overlay_state,
+            overlay::get_overlay_url,
         ])
         .setup(|app| {
+            // ── OBS overlay loopback server ────────────────────────────────
+            let overlay_state = overlay::OverlayState::new();
+            match overlay::bind() {
+                Ok((listener, port)) => {
+                    overlay_state.set_port(port);
+                    let serve_state = overlay_state.clone();
+                    tauri::async_runtime::spawn(async move {
+                        overlay::serve(serve_state, listener).await;
+                    });
+                }
+                Err(error) => {
+                    eprintln!("failed to start overlay server: {error}");
+                }
+            }
+            app.manage(overlay_state);
+
             // ── System tray ────────────────────────────────────────────────
             let open = MenuItemBuilder::with_id("open", "Open SubStreak").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;

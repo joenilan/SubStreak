@@ -341,6 +341,43 @@ body {
   font-weight: 600;
 }
 
+/* Overlay card */
+.overlay-card__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.overlay-card__url {
+  flex: 1;
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 12px;
+  color: var(--accent-2);
+  background: #0d0f16;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overlay-card__copy {
+  background: var(--bg-card-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.overlay-card__copy:hover {
+  border-color: var(--accent);
+}
+
 .app__footer {
   text-align: center;
   font-size: 11px;

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { createJSONStorage, persist } from 'zustand/middleware'
+import { nativeStateStorage } from '../lib/platform/nativeStateStorage'
 import { applyInput } from '../lib/streak/engine'
 import {
   createInitialState,
@@ -64,6 +65,7 @@ export const useSubStreakStore = create<SubStreakStore>()(
     }),
     {
       name: 'substreak-state-v1',
+      storage: createJSONStorage(() => nativeStateStorage),
       // Persist only data, never the action closures.
       partialize: (s) => ({ config: s.config, streak: s.streak }),
     },
