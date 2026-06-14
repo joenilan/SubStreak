@@ -91,6 +91,23 @@ export const useSubStreakStore = create<SubStreakStore>()(
       storage: createJSONStorage(() => nativeStateStorage),
       // Persist only data, never the action closures.
       partialize: (s) => ({ config: s.config, streak: s.streak, overlay: s.overlay }),
+      // Deep-merge so fields added in newer versions (e.g. overlay.resolution)
+      // are backfilled for users with older saved state.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SubStreakStore>
+        return {
+          ...current,
+          ...p,
+          config: { ...current.config, ...(p.config ?? {}) },
+          streak: { ...current.streak, ...(p.streak ?? {}) },
+          overlay: {
+            ...current.overlay,
+            ...(p.overlay ?? {}),
+            resolution: p.overlay?.resolution ?? current.overlay.resolution,
+            text: { ...current.overlay.text, ...(p.overlay?.text ?? {}) },
+          },
+        }
+      },
     },
   ),
 )

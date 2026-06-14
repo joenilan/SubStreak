@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { getDisplay } from '../lib/streak/engine'
-import { clamp, OVERLAY_TOKENS } from '../lib/overlay/types'
+import { clamp, OVERLAY_TOKENS, RESOLUTION_PRESETS } from '../lib/overlay/types'
 import { OverlayPreview, type OverlayData } from '../components/OverlayPreview'
 import { CopyButton } from '../components/CopyButton'
 import { useSubStreakStore } from '../state/useSubStreakStore'
-
-const CANVAS_REF_WIDTH = 1920 // overlay coords are relative to a 1080p canvas
 
 export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
   const config = useSubStreakStore((s) => s.config)
@@ -15,14 +13,42 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
   const setOverlayText = useSubStreakStore((s) => s.setOverlayText)
   const resetOverlay = useSubStreakStore((s) => s.resetOverlay)
 
+  const resolution = overlay.resolution ?? { width: 1920, height: 1080 }
+
+  const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
-  const [canvasWidth, setCanvasWidth] = useState(0)
+  const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 })
   // Half the widget's size as a % of the canvas — the margin needed to keep it in bounds.
   const [bounds, setBounds] = useState({ halfW: 0, halfH: 0 })
   const boundsRef = useRef(bounds)
   const dragging = useRef(false)
 
+  // Fit a canvas of the chosen resolution's aspect ratio inside the available space,
+  // maintaining aspect at any window size (including maximized).
+  useEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+    const ar = resolution.width > 0 && resolution.height > 0 ? resolution.width / resolution.height : 16 / 9
+    const fit = () => {
+      const W = wrap.clientWidth
+      const H = wrap.clientHeight
+      if (W === 0 || H === 0) return
+      let w = W
+      let h = W / ar
+      if (h > H) {
+        h = H
+        w = H * ar
+      }
+      setCanvasSize({ w: Math.floor(w), h: Math.floor(h) })
+    }
+    const ro = new ResizeObserver(fit)
+    ro.observe(wrap)
+    fit()
+    return () => ro.disconnect()
+  }, [resolution.width, resolution.height])
+
+  // Measure the widget's size relative to the canvas for bounds clamping.
   useEffect(() => {
     const canvas = canvasRef.current
     const stage = stageRef.current
@@ -31,7 +57,6 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
       const cr = canvas.getBoundingClientRect()
       const sr = stage.getBoundingClientRect()
       if (cr.width === 0 || cr.height === 0) return
-      setCanvasWidth(canvas.clientWidth)
       const b = { halfW: (sr.width / 2 / cr.width) * 100, halfH: (sr.height / 2 / cr.height) * 100 }
       boundsRef.current = b
       setBounds(b)
@@ -71,7 +96,10 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
     live: view.liveToday,
   }
 
-  const factor = canvasWidth > 0 ? canvasWidth / CANVAS_REF_WIDTH : 0.3
+  const factor = resolution.width > 0 && canvasSize.w > 0 ? canvasSize.w / resolution.width : 0.3
+
+  const isPreset = RESOLUTION_PRESETS.some((p) => p.width === resolution.width && p.height === resolution.height)
+  const [showCustomRes, setShowCustomRes] = useState(!isPreset)
 
   const onPointerDown = (e: React.PointerEvent) => {
     dragging.current = true
@@ -93,8 +121,12 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
         <button className="btn btn--ghost" onClick={resetOverlay}>Reset</button>
       </div>
 
-      <div className="ovcanvas-wrap">
-        <div className="ovcanvas" ref={canvasRef}>
+      <div className="ovcanvas-wrap" ref={wrapRef}>
+        <div
+          className="ovcanvas"
+          ref={canvasRef}
+          style={{ width: canvasSize.w || undefined, height: canvasSize.h || undefined }}
+        >
           <div className="ovcanvas__grid" />
           <div
             ref={stageRef}
@@ -126,6 +158,44 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
           </span>
           <span className="row__action" />
         </div>
+        <div className="row">
+          <span className="row__label">Canvas</span>
+          <span className="row__value">
+            <span className="select select--full">
+              <select
+                value={isPreset && !showCustomRes ? `${resolution.width}x${resolution.height}` : 'custom'}
+                onChange={(e) => {
+                  if (e.target.value === 'custom') {
+                    setShowCustomRes(true)
+                    return
+                  }
+                  const [w, h] = e.target.value.split('x').map(Number)
+                  setShowCustomRes(false)
+                  setOverlay({ resolution: { width: w, height: h } })
+                }}
+              >
+                {RESOLUTION_PRESETS.map((p) => (
+                  <option key={p.label} value={`${p.width}x${p.height}`}>{p.label}</option>
+                ))}
+                <option value="custom">Custom…</option>
+              </select>
+            </span>
+          </span>
+          <span className="row__hint">match OBS</span>
+        </div>
+        {showCustomRes && (
+          <div className="row">
+            <span className="row__label" />
+            <span className="row__value res-custom">
+              <input type="number" min={160} max={7680} value={resolution.width || ''}
+                onChange={(e) => setOverlay({ resolution: { width: Math.max(0, Math.round(Number(e.target.value) || 0)), height: resolution.height } })} />
+              <span className="res-custom__x">×</span>
+              <input type="number" min={160} max={4320} value={resolution.height || ''}
+                onChange={(e) => setOverlay({ resolution: { width: resolution.width, height: Math.max(0, Math.round(Number(e.target.value) || 0)) } })} />
+            </span>
+            <span className="row__action" />
+          </div>
+        )}
         <div className="row">
           <span className="row__label">Horizontal</span>
           <span className="row__value">

@@ -521,13 +521,36 @@ body {
 
 .ovcanvas {
   position: relative;
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  max-width: 100%;
-  max-height: 100%;
   background: #08080a;
   border-radius: 3px;
   overflow: hidden;
+}
+
+.res-custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.res-custom input {
+  width: 84px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  padding: 7px 9px;
+}
+
+.res-custom input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.res-custom__x {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .ovcanvas__grid {

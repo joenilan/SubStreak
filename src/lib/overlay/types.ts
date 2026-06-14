@@ -10,14 +10,30 @@ export interface OverlayTextStyle {
   align: 'left' | 'center' | 'right'
 }
 
+export interface OverlayResolution {
+  width: number
+  height: number
+}
+
 export interface OverlaySettings {
   x: number // 0–100 (% of canvas width, anchor = element center)
   y: number // 0–100 (% of canvas height)
   scale: number // 50–200 (%)
   opacity: number // 0–100
   mode: OverlayMode
+  /** OBS canvas resolution the editor preview mimics so it's WYSIWYG. */
+  resolution: OverlayResolution
   text: OverlayTextStyle
 }
+
+export const RESOLUTION_PRESETS: Array<{ label: string } & OverlayResolution> = [
+  { label: '1920 × 1080', width: 1920, height: 1080 },
+  { label: '2560 × 1440', width: 2560, height: 1440 },
+  { label: '3840 × 2160', width: 3840, height: 2160 },
+  { label: '1280 × 720', width: 1280, height: 720 },
+  { label: '1080 × 1920 · vertical', width: 1080, height: 1920 },
+  { label: '720 × 1280 · vertical', width: 720, height: 1280 },
+]
 
 export const DEFAULT_OVERLAY: OverlaySettings = {
   x: 50,
@@ -25,6 +41,7 @@ export const DEFAULT_OVERLAY: OverlaySettings = {
   scale: 100,
   opacity: 100,
   mode: 'widget',
+  resolution: { width: 1920, height: 1080 },
   text: {
     template: 'DAILY GOAL  {current}/{target}     STREAK  {streak}',
     fontSize: 38,
