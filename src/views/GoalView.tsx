@@ -129,32 +129,35 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
       </section>
 
       {settingsOpen && (
-        <section className="panel rows">
-          <div className="row">
-            <span className="row__label">New day at</span>
-            <span className="row__value">
-              <span className="select">
-                <select value={config.dayRolloverHour} onChange={(e) => setRolloverHour(Number(e.target.value))}>
-                  {Array.from({ length: 24 }, (_, h) => (
-                    <option key={h} value={h}>{h === 0 ? 'Midnight' : `${h}:00`}</option>
-                  ))}
-                </select>
-              </span>
+        <Modal title="Settings" onClose={() => setSettingsOpen(false)}>
+          <div className="field-group">
+            <label className="field-group__label">New day at</label>
+            <span className="select select--full">
+              <select value={config.dayRolloverHour} onChange={(e) => setRolloverHour(Number(e.target.value))}>
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{h === 0 ? 'Midnight' : `${h}:00`}</option>
+                ))}
+              </select>
             </span>
-            <span className="row__hint">goal + day resets here</span>
+            <p className="modal__hint">
+              When a new day starts — today resets to 0 and a fresh streak day begins.
+              Set it after midnight if you stream past 12am, so a late session counts as one day.
+            </p>
           </div>
-          <div className="row">
-            <span className="row__label">Test</span>
-            <span className="row__value test-actions">
+
+          <div className="field-group">
+            <label className="field-group__label">Test events</label>
+            <div className="btn-group">
               <button className="btn btn--ghost" onClick={() => goLive()}>Go live</button>
               <button className="btn btn--ghost" onClick={() => simulateSub(1)}>+1 sub</button>
               <button className="btn btn--ghost" onClick={() => simulateSub(5)}>+5 gift</button>
-            </span>
-            <span className="row__action">
-              <button className="btn btn--danger" onClick={() => hardReset()}>Reset</button>
-            </span>
+            </div>
           </div>
-        </section>
+
+          <button className="btn btn--danger btn--full" onClick={() => hardReset()}>
+            Reset all progress
+          </button>
+        </Modal>
       )}
 
       {deviceFlow && twitchStatus === 'authorizing' && (
