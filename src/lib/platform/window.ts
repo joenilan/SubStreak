@@ -11,6 +11,12 @@ export async function minimizeWindow() {
   await getCurrentWindow().minimize()
 }
 
+export async function toggleMaximizeWindow() {
+  if (!isNativeRuntime()) return
+  const { getCurrentWindow } = await import('@tauri-apps/api/window')
+  await getCurrentWindow().toggleMaximize()
+}
+
 /** Close routes through the native CloseRequested handler, which hides to tray. */
 export async function closeWindow() {
   if (!isNativeRuntime()) return

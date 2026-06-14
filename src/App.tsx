@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { Minus, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Minus, Square, X } from 'lucide-react'
 import { getDisplay } from './lib/streak/engine'
-import { closeWindow, minimizeWindow } from './lib/platform/window'
-import { useFitWindowHeight } from './hooks/useFitWindowHeight'
+import { closeWindow, minimizeWindow, toggleMaximizeWindow } from './lib/platform/window'
+import { useViewWindowSize } from './hooks/useViewWindowSize'
 import { useSubStreakStore } from './state/useSubStreakStore'
 import { useTwitchStore } from './state/useTwitchStore'
 import { useTwitchAuth } from './hooks/useTwitchAuth'
@@ -24,8 +24,7 @@ export function App() {
   const twitchConnected = useTwitchStore((s) => s.status === 'connected')
 
   const [activeView, setActiveView] = useState<View>('goal')
-  const viewRef = useRef<HTMLDivElement>(null)
-  useFitWindowHeight(viewRef)
+  useViewWindowSize(activeView)
 
   useEffect(() => {
     tick()
@@ -53,6 +52,9 @@ export function App() {
           <button className="wbtn" aria-label="Minimize" onClick={() => void minimizeWindow()}>
             <Minus size={15} />
           </button>
+          <button className="wbtn" aria-label="Maximize" onClick={() => void toggleMaximizeWindow()}>
+            <Square size={12} />
+          </button>
           <button className="wbtn wbtn--close" aria-label="Close" onClick={() => void closeWindow()}>
             <X size={15} />
           </button>
@@ -60,7 +62,7 @@ export function App() {
       </header>
 
       <main className="content">
-        <div className="view" ref={viewRef}>
+        <div className="view">
           {activeView === 'goal' ? <GoalView auth={auth} /> : <OverlayView overlayUrl={overlayUrl} />}
         </div>
       </main>

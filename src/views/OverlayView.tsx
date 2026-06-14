@@ -65,23 +65,25 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
         <button className="btn btn--ghost" onClick={resetOverlay}>Reset</button>
       </div>
 
-      <div className="ovcanvas" ref={canvasRef}>
-        <div className="ovcanvas__grid" />
-        <div
-          className="ovstage"
-          style={{
-            left: `${overlay.x}%`,
-            top: `${overlay.y}%`,
-            transform: `translate(-50%, -50%) scale(${factor * (overlay.scale / 100)})`,
-            opacity: overlay.opacity / 100,
-          }}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-        >
-          <OverlayPreview settings={overlay} data={data} />
+      <div className="ovcanvas-wrap">
+        <div className="ovcanvas" ref={canvasRef}>
+          <div className="ovcanvas__grid" />
+          <div
+            className="ovstage"
+            style={{
+              left: `${overlay.x}%`,
+              top: `${overlay.y}%`,
+              transform: `translate(-50%, -50%) scale(${factor * (overlay.scale / 100)})`,
+              opacity: overlay.opacity / 100,
+            }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+          >
+            <OverlayPreview settings={overlay} data={data} />
+          </div>
+          <span className="ovcanvas__hint">Drag to position</span>
         </div>
-        <span className="ovcanvas__hint">Drag to position</span>
       </div>
 
       <section className="panel rows">
