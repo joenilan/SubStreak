@@ -131,7 +131,7 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
       {settingsOpen && (
         <section className="panel rows">
           <div className="row">
-            <span className="row__label">Day reset</span>
+            <span className="row__label">New day at</span>
             <span className="row__value">
               <span className="select">
                 <select value={config.dayRolloverHour} onChange={(e) => setRolloverHour(Number(e.target.value))}>
@@ -141,7 +141,7 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
                 </select>
               </span>
             </span>
-            <span className="row__hint">new day starts</span>
+            <span className="row__hint">goal + day resets here</span>
           </div>
           <div className="row">
             <span className="row__label">Test</span>

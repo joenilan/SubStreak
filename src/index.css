@@ -123,6 +123,12 @@ body {
   padding: 22px 18px 18px;
   display: flex;
   flex-direction: column;
+}
+
+/* Natural-height wrapper measured to auto-fit the window height. */
+.view {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
 }
 

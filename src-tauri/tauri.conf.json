@@ -15,10 +15,10 @@
       {
         "label": "main",
         "title": "SubStreak",
-        "width": 520,
-        "height": 640,
-        "minWidth": 460,
-        "minHeight": 560,
+        "width": 500,
+        "height": 460,
+        "minWidth": 440,
+        "minHeight": 300,
         "resizable": true,
         "decorations": false,
         "backgroundColor": "#0d0d0f"

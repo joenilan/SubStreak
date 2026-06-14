@@ -96,6 +96,22 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
           <span className="row__action" />
         </div>
         <div className="row">
+          <span className="row__label">Horizontal</span>
+          <span className="row__value">
+            <input className="slider" type="range" min={0} max={100} value={Math.round(overlay.x)}
+              onChange={(e) => setOverlay({ x: Number(e.target.value) })} />
+          </span>
+          <span className="row__hint">{Math.round(overlay.x)}%</span>
+        </div>
+        <div className="row">
+          <span className="row__label">Vertical</span>
+          <span className="row__value">
+            <input className="slider" type="range" min={0} max={100} value={Math.round(overlay.y)}
+              onChange={(e) => setOverlay({ y: Number(e.target.value) })} />
+          </span>
+          <span className="row__hint">{Math.round(overlay.y)}%</span>
+        </div>
+        <div className="row">
           <span className="row__label">Scale</span>
           <span className="row__value">
             <input className="slider" type="range" min={50} max={200} value={overlay.scale}

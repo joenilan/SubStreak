@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Minus, X } from 'lucide-react'
 import { getDisplay } from './lib/streak/engine'
 import { closeWindow, minimizeWindow } from './lib/platform/window'
+import { useFitWindowHeight } from './hooks/useFitWindowHeight'
 import { useSubStreakStore } from './state/useSubStreakStore'
 import { useTwitchStore } from './state/useTwitchStore'
 import { useTwitchAuth } from './hooks/useTwitchAuth'
@@ -23,6 +24,8 @@ export function App() {
   const twitchConnected = useTwitchStore((s) => s.status === 'connected')
 
   const [activeView, setActiveView] = useState<View>('goal')
+  const viewRef = useRef<HTMLDivElement>(null)
+  useFitWindowHeight(viewRef)
 
   useEffect(() => {
     tick()
@@ -57,7 +60,9 @@ export function App() {
       </header>
 
       <main className="content">
-        {activeView === 'goal' ? <GoalView auth={auth} /> : <OverlayView overlayUrl={overlayUrl} />}
+        <div className="view" ref={viewRef}>
+          {activeView === 'goal' ? <GoalView auth={auth} /> : <OverlayView overlayUrl={overlayUrl} />}
+        </div>
       </main>
 
       <footer className="statusbar">
