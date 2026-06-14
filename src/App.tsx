@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Minus, X } from 'lucide-react'
 import { getDisplay } from './lib/streak/engine'
 import { closeWindow, minimizeWindow } from './lib/platform/window'
 import { useSubStreakStore } from './state/useSubStreakStore'
@@ -47,10 +48,10 @@ export function App() {
         </div>
         <div className="titlebar__controls">
           <button className="wbtn" aria-label="Minimize" onClick={() => void minimizeWindow()}>
-            <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0" y="4.5" width="10" height="1" fill="currentColor" /></svg>
+            <Minus size={15} />
           </button>
           <button className="wbtn wbtn--close" aria-label="Close" onClick={() => void closeWindow()}>
-            <svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 0 L10 10 M10 0 L0 10" stroke="currentColor" strokeWidth="1" /></svg>
+            <X size={15} />
           </button>
         </div>
       </header>

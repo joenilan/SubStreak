@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { Check, Clipboard, ExternalLink, Settings } from 'lucide-react'
 import { getDisplay } from '../lib/streak/engine'
 import { isTwitchConfigured } from '../lib/twitch/constants'
+import { copyText, openExternal } from '../lib/platform/open'
+import { Modal } from '../components/Modal'
 import { useSubStreakStore } from '../state/useSubStreakStore'
 import { useTwitchStore } from '../state/useTwitchStore'
 import type { TwitchAuthActions } from '../hooks/useTwitchAuth'
@@ -36,6 +39,13 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
         ? 'WAITING FOR SUBS'
         : 'OFFLINE'
 
+  const twitchValue =
+    twitchStatus === 'connected' ? null
+    : !isTwitchConfigured() ? 'Client ID not set'
+    : twitchStatus === 'authorizing' ? 'Authorizing…'
+    : twitchStatus === 'bootstrapping' || twitchStatus === 'refreshing' ? 'Working…'
+    : twitchError ?? 'Not connected'
+
   return (
     <>
       <div className="sectionhead">
@@ -43,12 +53,10 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
         <button
           className={`gear ${settingsOpen ? 'gear--on' : ''}`}
           aria-label="Settings"
+          title="Settings"
           onClick={() => setSettingsOpen((v) => !v)}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" />
-          </svg>
+          <Settings size={17} />
         </button>
       </div>
 
@@ -75,61 +83,50 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
         </section>
       </div>
 
-      {deviceFlow && twitchStatus === 'authorizing' ? (
-        <section className="panel devicecode">
-          <div className="devicecode__lead">Enter this code at</div>
-          <a className="devicecode__link" href={deviceFlow.verificationUri} target="_blank" rel="noreferrer">
-            {deviceFlow.verificationUri.replace(/^https?:\/\//, '')}
-          </a>
-          <div className="devicecode__code">{deviceFlow.userCode}</div>
-          <button className="btn btn--ghost" onClick={cancelLogin}>Cancel</button>
-        </section>
-      ) : (
-        <section className="panel rows">
-          <div className="row">
-            <span className="row__label">Twitch</span>
-            <span className="row__value">
-              {twitchStatus === 'connected' ? (
-                <>
-                  <span className="row__strong">{session?.login}</span>
-                  <span className={`tag ${eventSubConnected ? 'tag--on' : ''}`}>
-                    {eventSubConnected ? 'Listening' : 'Connecting'}
-                  </span>
-                </>
-              ) : !isTwitchConfigured() ? (
-                'Client ID not set'
-              ) : twitchStatus === 'bootstrapping' || twitchStatus === 'refreshing' ? (
-                'Working…'
-              ) : (
-                twitchError ?? 'Not connected'
-              )}
-            </span>
-            <span className="row__action">
-              {twitchStatus === 'connected' ? (
-                <button className="btn btn--ghost" onClick={() => void logout()}>Sign out</button>
-              ) : (
-                <button className="btn" disabled={!isTwitchConfigured() || twitchStatus === 'bootstrapping'} onClick={() => void login()}>
-                  Connect
-                </button>
-              )}
-            </span>
-          </div>
+      <section className="panel rows">
+        <div className="row">
+          <span className="row__label">Twitch</span>
+          <span className="row__value">
+            {twitchStatus === 'connected' ? (
+              <>
+                <span className="row__strong">{session?.login}</span>
+                <span className={`tag ${eventSubConnected ? 'tag--on' : ''}`}>
+                  {eventSubConnected ? 'Listening' : 'Connecting'}
+                </span>
+              </>
+            ) : (
+              twitchValue
+            )}
+          </span>
+          <span className="row__action">
+            {twitchStatus === 'connected' ? (
+              <button className="btn btn--ghost" onClick={() => void logout()}>Sign out</button>
+            ) : (
+              <button
+                className="btn"
+                disabled={!isTwitchConfigured() || twitchStatus === 'bootstrapping' || twitchStatus === 'authorizing'}
+                onClick={() => void login()}
+              >
+                Connect
+              </button>
+            )}
+          </span>
+        </div>
 
-          <div className="row">
-            <span className="row__label">Goal</span>
-            <span className="row__value">
-              <span className="select">
-                <select value={config.dailyGoalTarget} onChange={(e) => setTarget(Number(e.target.value))}>
-                  {(GOAL_PRESETS.includes(config.dailyGoalTarget) ? GOAL_PRESETS : [config.dailyGoalTarget, ...GOAL_PRESETS]).map((n) => (
-                    <option key={n} value={n}>{n} {n === 1 ? 'sub' : 'subs'} / day</option>
-                  ))}
-                </select>
-              </span>
+        <div className="row">
+          <span className="row__label">Goal</span>
+          <span className="row__value">
+            <span className="select">
+              <select value={config.dailyGoalTarget} onChange={(e) => setTarget(Number(e.target.value))}>
+                {(GOAL_PRESETS.includes(config.dailyGoalTarget) ? GOAL_PRESETS : [config.dailyGoalTarget, ...GOAL_PRESETS]).map((n) => (
+                  <option key={n} value={n}>{n} {n === 1 ? 'sub' : 'subs'} / day</option>
+                ))}
+              </select>
             </span>
-            <span className="row__action" />
-          </div>
-        </section>
-      )}
+          </span>
+          <span className="row__action" />
+        </div>
+      </section>
 
       {settingsOpen && (
         <section className="panel rows">
@@ -159,6 +156,39 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
           </div>
         </section>
       )}
+
+      {deviceFlow && twitchStatus === 'authorizing' && (
+        <Modal title="Connect Twitch" onClose={cancelLogin}>
+          <p className="modal__text">
+            Open Twitch, sign in, then enter this code to link your channel.
+          </p>
+          <button className="btn btn--full" onClick={() => void openExternal(deviceFlow.verificationUri)}>
+            <ExternalLink size={15} />
+            Open {deviceFlow.verificationUri.replace(/^https?:\/\/(www\.)?/, '')}
+          </button>
+          <CodeChip code={deviceFlow.userCode} />
+          <p className="modal__wait">Waiting for you to authorize…</p>
+        </Modal>
+      )}
     </>
+  )
+}
+
+function CodeChip({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false)
+  const onCopy = async () => {
+    if (await copyText(code)) {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    }
+  }
+  return (
+    <button className="codechip" onClick={() => void onCopy()} title="Click to copy">
+      <span className="codechip__code">{code}</span>
+      <span className="codechip__hint">
+        {copied ? <Check size={14} /> : <Clipboard size={14} />}
+        {copied ? 'Copied' : 'Click to copy'}
+      </span>
+    </button>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getDisplay } from '../lib/streak/engine'
 import { clamp, OVERLAY_TOKENS } from '../lib/overlay/types'
 import { OverlayPreview, type OverlayData } from '../components/OverlayPreview'
+import { CopyButton } from '../components/CopyButton'
 import { useSubStreakStore } from '../state/useSubStreakStore'
 
 const CANVAS_REF_WIDTH = 1920 // overlay coords are relative to a 1080p canvas
@@ -162,16 +163,5 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
         </section>
       )}
     </div>
-  )
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <button className="btn btn--ghost" onClick={() =>
-      void navigator.clipboard.writeText(text).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 1400) })
-    }>
-      {copied ? 'Copied' : 'Copy'}
-    </button>
   )
 }
