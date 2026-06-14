@@ -8,8 +8,8 @@ function isNativeRuntime() {
 // usable canvas; the goal view is compact. Both layouts are responsive, so the
 // user can freely resize or maximize from here without ever getting a scrollbar.
 const SIZES: Record<string, { w: number; h: number }> = {
-  goal: { w: 500, h: 470 },
-  overlay: { w: 560, h: 720 },
+  goal: { w: 560, h: 470 },
+  overlay: { w: 600, h: 720 },
 }
 
 /**

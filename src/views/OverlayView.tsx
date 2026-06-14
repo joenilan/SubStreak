@@ -16,17 +16,48 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
   const resetOverlay = useSubStreakStore((s) => s.resetOverlay)
 
   const canvasRef = useRef<HTMLDivElement>(null)
+  const stageRef = useRef<HTMLDivElement>(null)
   const [canvasWidth, setCanvasWidth] = useState(0)
+  // Half the widget's size as a % of the canvas — the margin needed to keep it in bounds.
+  const [bounds, setBounds] = useState({ halfW: 0, halfH: 0 })
+  const boundsRef = useRef(bounds)
   const dragging = useRef(false)
 
   useEffect(() => {
-    const el = canvasRef.current
-    if (!el) return
-    const ro = new ResizeObserver(() => setCanvasWidth(el.clientWidth))
-    ro.observe(el)
-    setCanvasWidth(el.clientWidth)
+    const canvas = canvasRef.current
+    const stage = stageRef.current
+    if (!canvas || !stage) return
+    const recompute = () => {
+      const cr = canvas.getBoundingClientRect()
+      const sr = stage.getBoundingClientRect()
+      if (cr.width === 0 || cr.height === 0) return
+      setCanvasWidth(canvas.clientWidth)
+      const b = { halfW: (sr.width / 2 / cr.width) * 100, halfH: (sr.height / 2 / cr.height) * 100 }
+      boundsRef.current = b
+      setBounds(b)
+    }
+    const ro = new ResizeObserver(recompute)
+    ro.observe(canvas)
+    ro.observe(stage)
+    recompute()
     return () => ro.disconnect()
   }, [])
+
+  // Clamp a center position so the whole widget stays inside the canvas.
+  const clampToBounds = (x: number, y: number) => {
+    const { halfW, halfH } = boundsRef.current
+    return {
+      x: clamp(x, Math.min(halfW, 50), Math.max(100 - halfW, 50)),
+      y: clamp(y, Math.min(halfH, 50), Math.max(100 - halfH, 50)),
+    }
+  }
+
+  // Re-clamp when the widget grows/shrinks (scale, mode, content) so it never overflows.
+  useEffect(() => {
+    const { x, y } = clampToBounds(overlay.x, overlay.y)
+    if (Math.abs(x - overlay.x) > 0.05 || Math.abs(y - overlay.y) > 0.05) setOverlay({ x, y })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bounds])
 
   const view = getDisplay(streak, config)
   const data: OverlayData = {
@@ -49,10 +80,7 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current || !canvasRef.current) return
     const r = canvasRef.current.getBoundingClientRect()
-    setOverlay({
-      x: clamp(((e.clientX - r.left) / r.width) * 100, 0, 100),
-      y: clamp(((e.clientY - r.top) / r.height) * 100, 0, 100),
-    })
+    setOverlay(clampToBounds(((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100))
   }
   const onPointerUp = () => {
     dragging.current = false
@@ -69,6 +97,7 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
         <div className="ovcanvas" ref={canvasRef}>
           <div className="ovcanvas__grid" />
           <div
+            ref={stageRef}
             className="ovstage"
             style={{
               left: `${overlay.x}%`,
@@ -100,7 +129,9 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
         <div className="row">
           <span className="row__label">Horizontal</span>
           <span className="row__value">
-            <input className="slider" type="range" min={0} max={100} value={Math.round(overlay.x)}
+            <input className="slider" type="range"
+              min={Math.round(Math.min(bounds.halfW, 50))} max={Math.round(Math.max(100 - bounds.halfW, 50))}
+              value={Math.round(overlay.x)}
               onChange={(e) => setOverlay({ x: Number(e.target.value) })} />
           </span>
           <span className="row__hint">{Math.round(overlay.x)}%</span>
@@ -108,7 +139,9 @@ export function OverlayView({ overlayUrl }: { overlayUrl: string }) {
         <div className="row">
           <span className="row__label">Vertical</span>
           <span className="row__value">
-            <input className="slider" type="range" min={0} max={100} value={Math.round(overlay.y)}
+            <input className="slider" type="range"
+              min={Math.round(Math.min(bounds.halfH, 50))} max={Math.round(Math.max(100 - bounds.halfH, 50))}
+              value={Math.round(overlay.y)}
               onChange={(e) => setOverlay({ y: Number(e.target.value) })} />
           </span>
           <span className="row__hint">{Math.round(overlay.y)}%</span>
