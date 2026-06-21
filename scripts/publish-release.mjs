@@ -55,6 +55,25 @@ execSync(
 )
 const setupSig = readFileSync(resolve(releaseRoot, setupSigName), 'utf8').trim()
 
+// Guard: the signature MUST come from the key whose pubkey is embedded in the app
+// (tauri.conf.json plugins.updater.pubkey). If it doesn't, every installed app rejects
+// the update with "update install failed". This silently happened on 0.1.3 when the
+// parent .env.raspi key (subathon-timer.key) won the env merge instead of substreak.key.
+const tauriConf = JSON.parse(readFileSync(resolve(appRoot, 'src-tauri', 'tauri.conf.json'), 'utf8'))
+const configuredPubkey = tauriConf?.plugins?.updater?.pubkey
+if (!configuredPubkey) throw new Error('No plugins.updater.pubkey found in src-tauri/tauri.conf.json')
+const pubkeyId = minisignKeyId(configuredPubkey)
+const signatureId = minisignKeyId(setupSig)
+if (pubkeyId !== signatureId) {
+  throw new Error(
+    `Signing key mismatch — aborting before upload.\n` +
+    `  Installer was signed by minisign key id: ${signatureId}\n` +
+    `  tauri.conf.json pubkey expects key id:   ${pubkeyId}\n` +
+    `Point TAURI_SIGNING_PRIVATE_KEY_PATH at the key matching the app pubkey ` +
+    `(its .pub must equal plugins.updater.pubkey). For SubStreak this is substreak.key.`,
+  )
+}
+
 // latest.json — site download-button format.
 const latest = {
   version,
@@ -149,6 +168,18 @@ async function archiveCurrentTopLevelRelease(sftp) {
     if (await sftp.exists(to)) await sftp.delete(to)
     await sftp.rename(from, to)
   }
+}
+
+// Extract the 8-byte minisign key id (hex) from a base64-encoded minisign
+// pubkey or .sig file (Tauri stores both as a single base64 blob). The key id is
+// bytes 2..10 of the first non-comment payload line.
+function minisignKeyId(base64FileContents) {
+  const text = Buffer.from(base64FileContents, 'base64').toString('utf8')
+  const payloadLine = text
+    .split(/\r?\n/)
+    .find((line) => line && !line.startsWith('untrusted comment:') && !line.startsWith('trusted comment:'))
+  if (!payloadLine) throw new Error('Could not parse minisign payload line')
+  return Buffer.from(payloadLine.trim(), 'base64').subarray(2, 10).toString('hex')
 }
 
 function loadEnvFile(path) {
