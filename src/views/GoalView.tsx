@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Clipboard, ExternalLink, Settings } from 'lucide-react'
 import { getDisplay } from '../lib/streak/engine'
 import { isTwitchConfigured } from '../lib/twitch/constants'
@@ -7,8 +7,6 @@ import { Modal } from '../components/Modal'
 import { useSubStreakStore } from '../state/useSubStreakStore'
 import { useTwitchStore } from '../state/useTwitchStore'
 import type { TwitchAuthActions } from '../hooks/useTwitchAuth'
-
-const GOAL_PRESETS = [1, 2, 3, 5, 7, 10, 15, 20, 25, 50]
 
 export function GoalView({ auth }: { auth: TwitchAuthActions }) {
   const { login, cancelLogin, logout } = auth
@@ -27,6 +25,11 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
   const eventSubConnected = useTwitchStore((s) => s.eventSubConnected)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [goalDraft, setGoalDraft] = useState(() => String(config.dailyGoalTarget))
+
+  useEffect(() => {
+    setGoalDraft(String(config.dailyGoalTarget))
+  }, [config.dailyGoalTarget])
 
   const view = getDisplay(streak, config)
   const pct = Math.min(100, Math.round((view.rawCount / view.target) * 100))
@@ -116,13 +119,25 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
         <div className="row">
           <span className="row__label">Goal</span>
           <span className="row__value">
-            <span className="select">
-              <select value={config.dailyGoalTarget} onChange={(e) => setTarget(Number(e.target.value))}>
-                {(GOAL_PRESETS.includes(config.dailyGoalTarget) ? GOAL_PRESETS : [config.dailyGoalTarget, ...GOAL_PRESETS]).map((n) => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'sub' : 'subs'} / day</option>
-                ))}
-              </select>
-            </span>
+            <input
+              className="number-input number-input--goal"
+              type="number"
+              min={1}
+              step={1}
+              inputMode="numeric"
+              value={goalDraft}
+              aria-label="Daily sub goal"
+              onChange={(e) => {
+                const next = e.target.value
+                if (!/^\d*$/.test(next)) return
+                setGoalDraft(next)
+                if (next) setTarget(Number(next))
+              }}
+              onBlur={() => {
+                if (!goalDraft || Number(goalDraft) < 1) setGoalDraft(String(config.dailyGoalTarget))
+              }}
+            />
+            <span className="row__hint">{config.dailyGoalTarget === 1 ? 'sub' : 'subs'} / day</span>
           </span>
           <span className="row__action" />
         </div>

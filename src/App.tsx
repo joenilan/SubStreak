@@ -10,6 +10,7 @@ import { useEventSub } from './hooks/useEventSub'
 import { useOverlaySync } from './hooks/useOverlaySync'
 import { GoalView } from './views/GoalView'
 import { OverlayView } from './views/OverlayView'
+import { UpdateStatus } from './components/UpdateStatus'
 
 type View = 'goal' | 'overlay'
 
@@ -20,7 +21,7 @@ export function App() {
 
   const auth = useTwitchAuth()
   useEventSub()
-  const { overlayUrl } = useOverlaySync()
+  const overlayUrls = useOverlaySync()
   const twitchConnected = useTwitchStore((s) => s.status === 'connected')
 
   const [activeView, setActiveView] = useState<View>('goal')
@@ -63,12 +64,12 @@ export function App() {
 
       <main className="content">
         <div className="view">
-          {activeView === 'goal' ? <GoalView auth={auth} /> : <OverlayView overlayUrl={overlayUrl} />}
+          {activeView === 'goal' ? <GoalView auth={auth} /> : <OverlayView {...overlayUrls} />}
         </div>
       </main>
 
       <footer className="statusbar">
-        <span>v{__APP_VERSION__}</span>
+        <UpdateStatus />
         <span>Runs in the system tray</span>
       </footer>
     </div>

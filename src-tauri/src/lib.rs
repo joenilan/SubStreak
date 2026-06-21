@@ -49,22 +49,14 @@ pub fn run() {
             app_state::save_substreak_state,
             app_state::clear_substreak_state,
             overlay::update_overlay_state,
-            overlay::get_overlay_url,
+            overlay::get_overlay_urls,
+            overlay::set_overlay_network_mode,
         ])
         .setup(|app| {
             // ── OBS overlay loopback server ────────────────────────────────
             let overlay_state = overlay::OverlayState::new();
-            match overlay::bind() {
-                Ok((listener, port)) => {
-                    overlay_state.set_port(port);
-                    let serve_state = overlay_state.clone();
-                    tauri::async_runtime::spawn(async move {
-                        overlay::serve(serve_state, listener).await;
-                    });
-                }
-                Err(error) => {
-                    eprintln!("failed to start overlay server: {error}");
-                }
+            if let Err(error) = overlay_state.start(false) {
+                eprintln!("{error}");
             }
             app.manage(overlay_state);
 

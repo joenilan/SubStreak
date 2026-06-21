@@ -105,12 +105,12 @@ Shared-session P2P, the spin wheel + moderation scopes, tip providers, multi-lad
    - Native storage: `src-tauri/src/twitch_session.rs` (Windows DPAPI, keyring fallback) + `src/lib/platform/nativeTwitchSession.ts`.
    - `src/hooks/useTwitchAuth.ts`: bootstrap from storage, device-code login UI, refresh ~5min early, hourly validate, logout. Client ID from `VITE_TWITCH_CLIENT_ID` (`.env`, gitignored).
 6. ✅ EventSub ingestion (`src/hooks/useEventSub.ts`): subscribes to `channel.subscribe` / `channel.subscription.gift` / `channel.subscription.message` / `stream.online`, dedupes by `message_id`, normalizes (`normalizeSubEvent.ts`), feeds the streak store's `ingest()`. Helix live poll on launch. Auto-reconnect.
-7. ✅ Release/updater pipeline ported (`scripts/version.mjs`, `package-release.mjs`, `publish-release.mjs`; `VERSION`, `CHANGELOG.md`, `PATCH_NOTES.md`; `version:*` + `release:*` package scripts). New signing keypair generated at `~/.tauri/substreak.key`; pubkey + endpoint wired into `tauri.conf.json`. Publisher reuses the shared `../../.env.raspi` for SSH creds and overlays the local `.env` for the substreak slug + signing key. **Not yet run end-to-end** — needs a real `bun run release:publish` (full Tauri build + SFTP upload).
+7. ✅ Release/updater pipeline ported (`scripts/version.mjs`, `package-release.mjs`, `publish-release.mjs`; `VERSION`, `CHANGELOG.md`, `PATCH_NOTES.md`; `version:*` + `release:*` package scripts). New signing keypair generated at `~/.tauri/substreak.key`; pubkey + endpoint wired into `tauri.conf.json`. Publisher reuses the shared `../../.env.raspi` for SSH creds and overlays the local `.env` for the substreak slug + signing key. First `bun run release:publish` completed on 2026-06-18 and uploaded installer, portable zip, hashes, `latest.json`, `updater.json`, and notes.
 8. ✅ Native file persistence for streak state/config (`src-tauri/src/app_state.rs` + `src/lib/platform/nativeStateStorage.ts`, wired through zustand `createJSONStorage`). Survives restarts/reinstalls; browser falls back to localStorage. (Launch `tick` finalize already runs in `App.tsx`; live-status poll already in `useEventSub`.)
 9. ✅ OBS overlay via a loopback HTTP server (`src-tauri/src/overlay.rs` + `overlay.html`, axum on an ephemeral 127.0.0.1 port; Saira served from `/fonts/*` for offline parity with the app). Front end pushes data + settings on every change (`useOverlaySync`).
    - ✅ In-app **Overlay editor** (`src/views/OverlayView.tsx`, ported from rocketsession's OBS editor): 16:9 drag-to-position canvas, Widget/Text modes, scale + opacity, custom-text template with stat tokens (`{current}`,`{streak}`,…), font size/color/align. Settings persisted (`overlay` slice) + live-synced. App split into Goal + Overlay tab views.
    - UI is the flat **metro** redesign (NZXT CAM direction): frameless titlebar, borderless panels, Saira / Saira Condensed, oversized numerals.
-10. Real `release:publish`; confirm auto-update end-to-end.
+10. ✅ Real `release:publish` completed. Still confirm auto-update from an installed older build when one exists.
 
 ### Website note
 Publishing uploads to `…/downloads/substreak/` and writes `updater.json` + `latest.json` there.
@@ -119,12 +119,13 @@ human-facing downloads page would need a new SubStreak card/section only if you 
 button listed there.
 
 ### Status note
-Phases 1–9 are done and verified to **build** (front end `bun run build`, native `cargo check`,
+Phases 1–10 are done and verified to **build** (front end `bun run build`, native `cargo check`,
 12/12 engine tests, `version:check` + `version:check-notes` green). Feature-complete for v1:
 connect Twitch (device code) → go live → subs drive the daily goal + streak; progress persists
-natively; an OBS overlay URL is served from the app. **Not yet runtime-tested** against live
-Twitch events, and **no real publish has run yet** (10). Next: a `bun run tauri:dev` smoke test
-and a first `bun run release:publish`.
+natively; an OBS overlay URL is served from the app. `bun run release:publish` has produced and
+uploaded the 0.1.0 release. **Not yet runtime-tested** against live Twitch events. Next: a
+full `bun run tauri:dev` Twitch smoke test: connect account, confirm EventSub, go live, receive a
+sub/resub/gift event, and verify dashboard + OBS overlay state.
 
 ---
 

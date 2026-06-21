@@ -3,6 +3,13 @@ import { invoke } from '@tauri-apps/api/core'
 import { getDisplay } from '../lib/streak/engine'
 import { useSubStreakStore } from '../state/useSubStreakStore'
 
+interface OverlayUrls {
+  overlayUrl: string
+  previewUrl: string
+  lanUrl: string | null
+  lanAccessEnabled: boolean
+}
+
 function isNativeRuntime() {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 }
@@ -11,21 +18,29 @@ function isNativeRuntime() {
  * Pushes the current overlay payload to the native loopback server whenever the
  * goal/streak changes, and exposes the OBS browser-source URL.
  */
-export function useOverlaySync(): { overlayUrl: string } {
+export function useOverlaySync(): OverlayUrls {
   const config = useSubStreakStore((s) => s.config)
   const streak = useSubStreakStore((s) => s.streak)
   const overlay = useSubStreakStore((s) => s.overlay)
-  const [overlayUrl, setOverlayUrl] = useState('')
+  const [urls, setUrls] = useState<OverlayUrls>({
+    overlayUrl: '',
+    previewUrl: '',
+    lanUrl: null,
+    lanAccessEnabled: false,
+  })
 
   // Resolve the loopback URL once the server is up.
   useEffect(() => {
     if (!isNativeRuntime()) return
     let cancelled = false
+    const applyUrls = (next: OverlayUrls) => {
+      if (!cancelled) setUrls(next)
+    }
     const poll = () => {
-      invoke<string>('get_overlay_url')
-        .then((url) => {
+      invoke<OverlayUrls>('get_overlay_urls')
+        .then((next) => {
           if (cancelled) return
-          if (url) setOverlayUrl(url)
+          if (next.overlayUrl) applyUrls(next)
           else window.setTimeout(poll, 500)
         })
         .catch(() => {})
@@ -35,6 +50,20 @@ export function useOverlaySync(): { overlayUrl: string } {
       cancelled = true
     }
   }, [])
+
+  // Switch between local-only and dual-PC LAN source mode.
+  useEffect(() => {
+    if (!isNativeRuntime()) return
+    let cancelled = false
+    invoke<OverlayUrls>('set_overlay_network_mode', { lanEnabled: overlay.lanAccessEnabled })
+      .then((next) => {
+        if (!cancelled) setUrls(next)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [overlay.lanAccessEnabled])
 
   // Push data + settings on every change.
   useEffect(() => {
@@ -54,5 +83,5 @@ export function useOverlaySync(): { overlayUrl: string } {
     invoke('update_overlay_state', { payload }).catch(() => {})
   }, [config, streak, overlay])
 
-  return { overlayUrl }
+  return urls
 }

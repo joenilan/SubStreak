@@ -1,66 +1,104 @@
-import { renderTemplate, type OverlaySettings } from '../lib/overlay/types'
+import type { CSSProperties } from 'react'
+import {
+  ALIGN_TO_FLEX,
+  renderTemplate,
+  type OverlayElement,
+  type OverlaySettings,
+  type OverlayTokens,
+} from '../lib/overlay/types'
 
-export interface OverlayData {
-  current: number
-  target: number
-  remaining: number
-  pct: number
-  streak: number
-  best: number
+export interface OverlayData extends OverlayTokens {
   goalHit: boolean
   live: boolean
 }
 
+interface OverlayPreviewProps {
+  settings: OverlaySettings
+  data: OverlayData
+  /** Resolution px → preview px. Use 1 for the live (full-size) overlay. */
+  factor: number
+  interactive?: boolean
+  selectedId?: string | null
+  groupSelected?: boolean
+  onElementPointerDown?: (id: string, e: React.PointerEvent) => void
+  onGroupPointerDown?: (e: React.PointerEvent) => void
+}
+
+function lineText(el: OverlayElement, data: OverlayData): string {
+  return renderTemplate(el.template, data)
+}
+
 /**
- * Presentational overlay content (widget or custom text), rendered at real px.
- * The caller positions/scales it. Kept visually in sync with src-tauri/src/overlay.html.
+ * Presentational overlay content. Renders the grouped text block or the
+ * independent elements directly into the canvas coordinate space (% positions).
+ * Kept visually in sync with src-tauri/src/overlay.html.
  */
-export function OverlayPreview({ settings, data }: { settings: OverlaySettings; data: OverlayData }) {
-  if (settings.mode === 'text') {
+export function OverlayPreview({
+  settings,
+  data,
+  factor,
+  interactive,
+  selectedId,
+  groupSelected,
+  onElementPointerDown,
+  onGroupPointerDown,
+}: OverlayPreviewProps) {
+  const visible = settings.elements.filter((el) => el.visible)
+  const { group } = settings
+
+  if (group.grouped) {
+    const groupStyle: CSSProperties = {
+      position: 'absolute',
+      left: `${group.x}%`,
+      top: `${group.y}%`,
+      transform: `translate(-50%, -50%) scale(${factor * (group.scale / 100)}) rotate(${group.rotation}deg)`,
+      transformOrigin: 'center center',
+      display: 'flex',
+      flexDirection: group.direction === 'vertical' ? 'column' : 'row',
+      alignItems: ALIGN_TO_FLEX[group.align],
+      gap: `${group.gap}px`,
+      whiteSpace: 'nowrap',
+    }
     return (
       <div
-        className="ovp-text"
-        style={{
-          fontSize: settings.text.fontSize,
-          color: settings.text.color,
-          textAlign: settings.text.align,
-        }}
+        className={`ovp-group ${interactive ? 'ovp-interactive' : ''} ${groupSelected ? 'ovp-selected' : ''}`}
+        style={groupStyle}
+        onPointerDown={onGroupPointerDown}
       >
-        {renderTemplate(settings.text.template, data)}
+        {visible.map((el) => (
+          <div
+            key={el.id}
+            className="ovp-line"
+            style={{ fontSize: el.fontSize, color: el.color, textAlign: group.align }}
+          >
+            {lineText(el, data)}
+          </div>
+        ))}
       </div>
     )
   }
 
-  const cap = data.goalHit
-    ? 'Goal met'
-    : data.current > 0
-      ? `${data.remaining} more to go`
-      : data.live
-        ? 'Waiting for subs'
-        : 'Offline'
-
   return (
-    <div className={`ovp-widget ${data.goalHit ? 'ovp-met' : ''}`}>
-      <div className="ovp-cell">
-        <div className="ovp-label">Daily goal</div>
-        <div className="ovp-figure">
-          <span className="ovp-num">{data.current}</span>
-          <span className="ovp-den">/{data.target}</span>
+    <>
+      {visible.map((el) => (
+        <div
+          key={el.id}
+          className={`ovp-line ovp-float ${interactive ? 'ovp-interactive' : ''} ${selectedId === el.id ? 'ovp-selected' : ''}`}
+          style={{
+            position: 'absolute',
+            left: `${el.x}%`,
+            top: `${el.y}%`,
+            transform: `translate(-50%, -50%) scale(${factor * (el.scale / 100)}) rotate(${el.rotation}deg)`,
+            transformOrigin: 'center center',
+            fontSize: el.fontSize,
+            color: el.color,
+            whiteSpace: 'nowrap',
+          }}
+          onPointerDown={(e) => onElementPointerDown?.(el.id, e)}
+        >
+          {lineText(el, data)}
         </div>
-        <div className="ovp-bar">
-          <div className="ovp-fill" style={{ width: `${data.pct}%` }} />
-        </div>
-        <div className="ovp-cap">{cap}</div>
-      </div>
-      <div className="ovp-sep" />
-      <div className="ovp-cell ovp-streak">
-        <div className="ovp-label">Streak</div>
-        <div className="ovp-figure" style={{ justifyContent: 'center' }}>
-          <span className="ovp-num">{data.streak}</span>
-          <span className="ovp-unit">{data.streak === 1 ? 'day' : 'days'}</span>
-        </div>
-        <div className="ovp-cap">Best {data.best}</div>
-      </div>
-    </div>
+      ))}
+    </>
   )
 }

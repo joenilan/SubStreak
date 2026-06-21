@@ -416,6 +416,40 @@ body {
   border-color: var(--accent);
 }
 
+.number-input {
+  font-family: var(--font);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  padding: 8px 10px;
+}
+
+.number-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.number-input--goal {
+  width: 92px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.toggle input {
+  accent-color: var(--accent);
+}
+
+.toggle span {
+  font-size: 13px;
+}
+
 /* ── Device code ────────────────────────────────────────────────── */
 .devicecode {
   padding: 22px;
@@ -459,6 +493,85 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted-dim);
+}
+
+.update-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.update-status__button {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.update-status__button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.update-status__button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.update-status--checking,
+.update-status--installing {
+  color: var(--accent);
+}
+
+.update-status--checking .update-status__button,
+.update-status--installing .update-status__button {
+  color: var(--accent);
+  border-color: rgba(145, 71, 255, 0.45);
+}
+
+.update-status--current {
+  color: var(--good);
+}
+
+.update-status--current .update-status__button {
+  color: var(--good);
+  border-color: rgba(67, 214, 160, 0.35);
+}
+
+.update-status--available {
+  color: #fff;
+}
+
+.update-status--available .update-status__button {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.update-status--error {
+  color: var(--danger);
+}
+
+.update-status--error .update-status__button {
+  color: var(--danger);
+  border-color: rgba(229, 72, 77, 0.4);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Tabs ───────────────────────────────────────────────────────── */
@@ -511,8 +624,10 @@ body {
 }
 
 .ovcanvas-wrap {
+  /* Grow to fill spare space, but never collapse below a sizable share of the
+     window so the canvas stays large when maximized (controls scroll below). */
   flex: 1 1 auto;
-  min-height: 130px;
+  min-height: clamp(160px, 48vh, 820px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -524,6 +639,134 @@ body {
   background: #08080a;
   border-radius: 3px;
   overflow: hidden;
+  outline: none;
+}
+
+/* Focus ring signals the canvas is active for arrow-key nudging. */
+.ovcanvas:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Snap mode swaps the thirds guide for a fine grid matching the snap step. */
+.ovcanvas.snap .ovcanvas__grid {
+  background-size: 5% 5%;
+}
+
+.btnrow {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Magnetic alignment guides drawn over the canvas during a snap drag. */
+.ovguide {
+  position: absolute;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 5;
+}
+.ovguide--v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.ovguide--h {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+/* Position tools: 3×3 preset grid + nudge d-pad */
+.ovtools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.posgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 2px;
+  width: 54px;
+  height: 54px;
+}
+.posgrid__cell {
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+.posgrid__cell span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.posgrid__cell:hover {
+  border-color: var(--accent);
+}
+.posgrid__cell:hover span {
+  background: var(--accent);
+}
+.dpad {
+  position: relative;
+  width: 60px;
+  height: 54px;
+}
+.dpad__btn {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.dpad__btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.dpad__up { top: 0; left: 50%; transform: translateX(-50%); }
+.dpad__down { bottom: 0; left: 50%; transform: translateX(-50%); }
+.dpad__left { top: 50%; left: 4px; transform: translateY(-50%); }
+.dpad__right { top: 50%; right: 4px; transform: translateY(-50%); }
+
+/* Numeric value field in a transform row's hint slot */
+.row__hint.num {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.row__hint.num i {
+  font-style: normal;
+  color: var(--muted-dim);
+}
+.numfield {
+  width: 46px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 3px 5px;
+  text-align: right;
+}
+.numfield:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.iconbtn--mini {
+  width: 20px;
+  height: 20px;
+  padding: 0;
 }
 
 .res-custom {
@@ -575,101 +818,71 @@ body {
   pointer-events: none;
 }
 
-.ovstage {
-  position: absolute;
+/* Overlay preview content (mirrors overlay.html) */
+.ovp-group {
+  display: flex;
+}
+.ovp-line {
+  font-family: var(--font-num);
+  font-weight: 500;
+  white-space: nowrap;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
+  line-height: 1.15;
+}
+.ovp-interactive {
   cursor: grab;
   touch-action: none;
 }
-
-.ovstage:active {
+.ovp-interactive:active {
   cursor: grabbing;
 }
+.ovp-selected {
+  outline: 1px dashed var(--accent);
+  outline-offset: 4px;
+}
 
-/* Overlay preview content (mirrors overlay.html) */
-.ovp-widget {
-  display: inline-flex;
-  background: rgba(13, 13, 15, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  white-space: nowrap;
-}
-.ovp-cell {
-  padding: 15px 22px;
-}
-.ovp-sep {
-  width: 1px;
-  background: rgba(255, 255, 255, 0.08);
-}
-.ovp-label {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.ovp-figure {
-  font-family: var(--font-num);
-  font-weight: 300;
+/* Editor element list */
+.ov-elrow {
   display: flex;
-  align-items: baseline;
-  gap: 5px;
-  margin-top: 4px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  border-radius: 3px;
 }
-.ovp-num {
-  font-size: 50px;
-  line-height: 0.9;
-  font-variant-numeric: tabular-nums;
+.ov-elrow.on {
+  background: var(--panel-hover);
 }
-.ovp-den {
-  font-size: 22px;
-  color: var(--muted);
-}
-.ovp-unit {
-  font-family: var(--font);
-  font-weight: 500;
-  font-size: 15px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.ovp-bar {
-  height: 5px;
-  width: 200px;
-  background: rgba(255, 255, 255, 0.09);
-  border-radius: 2px;
-  margin-top: 11px;
-  overflow: hidden;
-}
-.ovp-fill {
-  height: 100%;
-  background: var(--accent);
-}
-.ovp-cap {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 9px;
-}
-.ovp-streak {
-  text-align: center;
-  min-width: 108px;
+.ov-elname {
+  flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
 }
-.ovp-met .ovp-num,
-.ovp-met .ovp-cap {
-  color: var(--good);
+.ov-elpreview {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
-.ovp-met .ovp-fill {
-  background: var(--good);
-}
-.ovp-text {
-  font-family: var(--font-num);
-  font-weight: 500;
-  white-space: pre;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.65);
-  line-height: 1.1;
+.btn--sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 5px 10px;
 }
 
 /* ── Segmented control / sliders / inputs ───────────────────────── */
@@ -958,6 +1171,12 @@ body {
   color: var(--text);
   border-color: var(--accent);
   background: var(--panel-hover);
+}
+
+.action-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 ::-webkit-scrollbar {
