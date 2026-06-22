@@ -38,10 +38,42 @@
         transition: left 0.15s ease, top 0.15s ease, transform 0.15s ease, opacity 0.2s ease;
         will-change: left, top, transform;
       }
+
+      /* Goal-hit celebration */
+      #celebrate {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        opacity: 0;
+        z-index: 10;
+      }
+      #celebrate.play { animation: goalpop 2.4s ease forwards; }
+      #celebrate .goal {
+        font-family: 'Saira Condensed';
+        font-weight: 500;
+        font-size: 72px;
+        line-height: 1;
+        letter-spacing: 0.04em;
+        color: #43d6a0;
+        text-shadow: 0 0 18px rgba(67, 214, 160, 0.7), 0 2px 10px rgba(0, 0, 0, 0.65);
+      }
+      @keyframes goalpop {
+        0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+        12% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+        70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+      }
+      /* Glow pulse on the lines — filter only, so positioned/rotated lines aren't disturbed. */
+      #root.celebrating .line { animation: linehit 0.9s ease; }
+      @keyframes linehit {
+        0%, 100% { filter: none; }
+        35% { filter: drop-shadow(0 0 14px rgba(67, 214, 160, 0.95)) brightness(1.3); }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="celebrate"></div>
 
     <script>
       const ALIGN_FLEX = { left: 'flex-start', center: 'center', right: 'flex-end' }
@@ -99,13 +131,42 @@
         }
       }
 
+      let lastCelebrate = null
+      let celTimer = null
+      function handleCelebrate(d) {
+        const at = d.celebrateAt || 0
+        if (!at) return
+        if (lastCelebrate === null) { lastCelebrate = at; return } // ignore first load
+        if (at === lastCelebrate) return
+        lastCelebrate = at
+        if (Date.now() - at > 8000) return // stale, don't replay on a late poll
+
+        const root = document.getElementById('root')
+        const cel = document.getElementById('celebrate')
+        const g = (d.settings && d.settings.group) || { x: 50, y: 50 }
+        cel.style.left = (g.x ?? 50) + '%'
+        cel.style.top = Math.max(6, (g.y ?? 50) - 12) + '%'
+        cel.innerHTML = '<div class="goal">GOAL!</div>'
+
+        root.classList.remove('celebrating'); void root.offsetWidth; root.classList.add('celebrating')
+        cel.classList.remove('play'); void cel.offsetWidth; cel.classList.add('play')
+        clearTimeout(celTimer)
+        celTimer = setTimeout(() => {
+          root.classList.remove('celebrating')
+          cel.classList.remove('play')
+          cel.innerHTML = ''
+        }, 2600)
+      }
+
       let last = ''
       async function refresh() {
         try {
           const body = await (await fetch('/state', { cache: 'no-store' })).text()
           if (body === last) return
           last = body
-          render(JSON.parse(body))
+          const d = JSON.parse(body)
+          render(d)
+          handleCelebrate(d)
         } catch (_) {}
       }
       refresh()

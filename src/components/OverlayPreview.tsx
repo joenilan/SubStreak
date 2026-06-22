@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import {
   ALIGN_TO_FLEX,
   renderTemplate,
@@ -20,6 +20,8 @@ interface OverlayPreviewProps {
   interactive?: boolean
   selectedId?: string | null
   groupSelected?: boolean
+  /** Bumped to replay the goal-hit celebration in the preview. */
+  celebrateAt?: number
   onElementPointerDown?: (id: string, e: React.PointerEvent) => void
   onGroupPointerDown?: (e: React.PointerEvent) => void
 }
@@ -40,11 +42,35 @@ export function OverlayPreview({
   interactive,
   selectedId,
   groupSelected,
+  celebrateAt,
   onElementPointerDown,
   onGroupPointerDown,
 }: OverlayPreviewProps) {
   const visible = settings.elements.filter((el) => el.visible)
   const { group } = settings
+
+  const [celebrating, setCelebrating] = useState(false)
+  const lastCel = useRef<number | undefined>(celebrateAt)
+  useEffect(() => {
+    if (!celebrateAt || celebrateAt === lastCel.current) return
+    lastCel.current = celebrateAt
+    setCelebrating(true)
+    const id = window.setTimeout(() => setCelebrating(false), 2400)
+    return () => window.clearTimeout(id)
+  }, [celebrateAt])
+
+  const celebrateBadge = celebrating ? (
+    <div
+      className="ovp-celebrate"
+      style={{
+        left: `${group.x}%`,
+        top: `${Math.max(6, group.y - 12)}%`,
+        transform: `translate(-50%, -50%) scale(${factor})`,
+      }}
+    >
+      GOAL!
+    </div>
+  ) : null
 
   if (group.grouped) {
     const groupStyle: CSSProperties = {
@@ -60,21 +86,24 @@ export function OverlayPreview({
       whiteSpace: 'nowrap',
     }
     return (
-      <div
-        className={`ovp-group ${interactive ? 'ovp-interactive' : ''} ${groupSelected ? 'ovp-selected' : ''}`}
-        style={groupStyle}
-        onPointerDown={onGroupPointerDown}
-      >
-        {visible.map((el) => (
-          <div
-            key={el.id}
-            className="ovp-line"
-            style={{ fontSize: el.fontSize, color: el.color, textAlign: group.align }}
-          >
-            {lineText(el, data)}
-          </div>
-        ))}
-      </div>
+      <>
+        <div
+          className={`ovp-group ${interactive ? 'ovp-interactive' : ''} ${groupSelected ? 'ovp-selected' : ''} ${celebrating ? 'ovp-celebrating' : ''}`}
+          style={groupStyle}
+          onPointerDown={onGroupPointerDown}
+        >
+          {visible.map((el) => (
+            <div
+              key={el.id}
+              className="ovp-line"
+              style={{ fontSize: el.fontSize, color: el.color, textAlign: group.align }}
+            >
+              {lineText(el, data)}
+            </div>
+          ))}
+        </div>
+        {celebrateBadge}
+      </>
     )
   }
 
@@ -83,7 +112,7 @@ export function OverlayPreview({
       {visible.map((el) => (
         <div
           key={el.id}
-          className={`ovp-line ovp-float ${interactive ? 'ovp-interactive' : ''} ${selectedId === el.id ? 'ovp-selected' : ''}`}
+          className={`ovp-line ovp-float ${interactive ? 'ovp-interactive' : ''} ${selectedId === el.id ? 'ovp-selected' : ''} ${celebrating ? 'ovp-celebrating' : ''}`}
           style={{
             position: 'absolute',
             left: `${el.x}%`,
@@ -99,6 +128,7 @@ export function OverlayPreview({
           {lineText(el, data)}
         </div>
       ))}
+      {celebrateBadge}
     </>
   )
 }

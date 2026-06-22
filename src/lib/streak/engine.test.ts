@@ -163,3 +163,94 @@ describe('longestStreak is retained after a reset', () => {
     expect(s.longestStreak).toBe(2)
   })
 })
+
+// ── Stream-session basis ─────────────────────────────────────────────────────
+const streamCfg = (over: Partial<SubStreakConfig> = {}): SubStreakConfig =>
+  cfg({ streakBasis: 'stream', reconnectGraceMinutes: 10, ...over })
+
+describe('stream basis: one streak step per stream session', () => {
+  it('credits when the goal is hit during a live session', () => {
+    const s = run(
+      [
+        { kind: 'stream-online', at: at('2026-06-13T20:00:00Z') },
+        { kind: 'sub', at: at('2026-06-13T20:05:00Z') },
+      ],
+      streamCfg(),
+    )
+    expect(s.streak).toBe(1)
+    expect(s.sessionGoalCredited).toBe(true)
+    expect(getDisplay(s, streamCfg()).goalText).toBe('Stream sub goal: 1/1')
+  })
+
+  it('counts two streams in the same day as two steps', () => {
+    const s = run(
+      [
+        { kind: 'stream-online', at: at('2026-06-13T14:00:00Z') },
+        { kind: 'sub', at: at('2026-06-13T14:05:00Z') }, // streak 1
+        { kind: 'stream-offline', at: at('2026-06-13T16:00:00Z') },
+        { kind: 'stream-online', at: at('2026-06-13T20:00:00Z') }, // new session (grace passed)
+        { kind: 'sub', at: at('2026-06-13T20:05:00Z') }, // streak 2
+      ],
+      streamCfg({ dailyGoalTarget: 1 }),
+    )
+    expect(s.streak).toBe(2)
+  })
+
+  it('breaks the streak when a session ends under goal', () => {
+    const s = run(
+      [
+        { kind: 'stream-online', at: at('2026-06-13T20:00:00Z') },
+        { kind: 'sub', at: at('2026-06-13T20:05:00Z') }, // streak 1
+        { kind: 'stream-offline', at: at('2026-06-13T22:00:00Z') }, // credited session ends, kept
+        { kind: 'stream-online', at: at('2026-06-14T20:00:00Z') }, // new session
+        { kind: 'stream-offline', at: at('2026-06-14T21:00:00Z') }, // no sub → under goal
+        { kind: 'tick', at: at('2026-06-14T21:30:00Z') }, // grace (10m) elapsed → break
+      ],
+      streamCfg(),
+    )
+    expect(s.streak).toBe(0)
+    expect(s.longestStreak).toBe(1)
+  })
+
+  it('keeps a credited session after it ends (offline + grace)', () => {
+    const s = run(
+      [
+        { kind: 'stream-online', at: at('2026-06-13T20:00:00Z') },
+        { kind: 'sub', at: at('2026-06-13T20:05:00Z') }, // streak 1
+        { kind: 'stream-offline', at: at('2026-06-13T22:00:00Z') },
+        { kind: 'tick', at: at('2026-06-13T23:00:00Z') }, // grace elapsed → close, no break
+      ],
+      streamCfg(),
+    )
+    expect(s.streak).toBe(1)
+    expect(s.streamLive).toBe(false)
+  })
+
+  it('treats a reconnect within grace as the same stream (count kept)', () => {
+    const s = run(
+      [
+        { kind: 'stream-online', at: at('2026-06-13T20:00:00Z') },
+        { kind: 'sub', at: at('2026-06-13T20:05:00Z') }, // 1 of 2
+        { kind: 'stream-offline', at: at('2026-06-13T20:10:00Z') }, // brief drop
+        { kind: 'stream-online', at: at('2026-06-13T20:14:00Z') }, // back within 10m grace
+        { kind: 'sub', at: at('2026-06-13T20:20:00Z') }, // 2 of 2 → streak 1
+      ],
+      streamCfg({ dailyGoalTarget: 2 }),
+    )
+    expect(s.streak).toBe(1)
+    expect(s.sessionSubCount).toBe(2)
+  })
+
+  it('does not break before the grace window elapses', () => {
+    const s = run(
+      [
+        { kind: 'stream-online', at: at('2026-06-13T20:00:00Z') }, // under goal
+        { kind: 'stream-offline', at: at('2026-06-13T20:10:00Z') },
+        { kind: 'tick', at: at('2026-06-13T20:15:00Z') }, // only 5m < 10m grace
+      ],
+      streamCfg({ dailyGoalTarget: 1 }),
+    )
+    expect(s.streak).toBe(0) // never credited, but also not yet finalized
+    expect(s.offlineSince).not.toBeNull()
+  })
+})

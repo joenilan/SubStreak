@@ -31,8 +31,22 @@ export function getStreamDayKey(at: Date, config: SubStreakConfig): string {
 /**
  * Apply one input to the state and return the next state. Pure — no I/O, no Date.now().
  * The caller supplies `at` so this is deterministic and testable.
+ *
+ * Dispatches on the configured streak basis. `streamBasis` undefined → 'day' so
+ * the legacy reducer (and its tests) keep working unchanged.
  */
 export function applyInput(
+  state: SubStreakState,
+  input: StreakInput,
+  config: SubStreakConfig,
+): SubStreakState {
+  if ((config.streakBasis ?? 'day') === 'stream') {
+    return applyStreamInput(state, input, config)
+  }
+  return applyDayInput(state, input, config)
+}
+
+function applyDayInput(
   state: SubStreakState,
   input: StreakInput,
   config: SubStreakConfig,
@@ -56,6 +70,9 @@ export function applyInput(
       break
     case 'stream-online':
       next.wasLiveToday = true
+      break
+    case 'stream-offline':
+      // Day basis ignores session boundaries.
       break
     case 'tick':
       // No accumulator change; the rollover check above is the whole point.
@@ -102,8 +119,98 @@ function maybeCreditStreak(
   }
 }
 
-/** Convenience view model for the UI/overlay. */
+// ── Stream-session basis ────────────────────────────────────────────────────
+//
+// One streak step per stream session. Going live starts (or, within the
+// reconnect grace, resumes) a session; hitting the goal during a live session
+// credits the streak once; a session that ends under goal breaks it. Off time
+// between sessions is neutral. The "session ended" decision is made lazily once
+// the reconnect grace has elapsed (on the next event or periodic tick).
+
+function applyStreamInput(
+  state: SubStreakState,
+  input: StreakInput,
+  config: SubStreakConfig,
+): SubStreakState {
+  const target = config.dailyGoalTarget
+  const graceMs = (config.reconnectGraceMinutes ?? 10) * 60_000
+  const nowMs = input.at.getTime()
+  let next: SubStreakState = { ...state }
+
+  // 1. Close a session whose reconnect grace has expired (break if uncredited).
+  if (!next.streamLive && next.offlineSince !== null && nowMs - next.offlineSince > graceMs) {
+    next = closeStreamSession(next)
+  }
+
+  // 2. Apply the event.
+  switch (input.kind) {
+    case 'stream-online':
+      if (!next.streamLive) {
+        if (next.offlineSince !== null) {
+          // Reconnected within grace → resume the same session, keep the count.
+          next.streamLive = true
+          next.offlineSince = null
+        } else {
+          // Fresh session.
+          next.streamLive = true
+          next.sessionSubCount = 0
+          next.sessionGoalCredited = false
+        }
+      }
+      break
+    case 'stream-offline':
+      if (next.streamLive) {
+        next.streamLive = false
+        next.offlineSince = nowMs // enter the reconnect grace window
+      }
+      break
+    case 'sub':
+      if (next.streamLive) next.sessionSubCount += Math.max(1, input.count ?? 1)
+      break
+    case 'tick':
+      // Only the grace-expiry check above matters.
+      break
+  }
+
+  // 3. Credit the streak the moment the goal is reached during a live session.
+  if (next.streamLive && !next.sessionGoalCredited && next.sessionSubCount >= target) {
+    const streak = next.streak + 1
+    next = {
+      ...next,
+      sessionGoalCredited: true,
+      streak,
+      longestStreak: Math.max(next.longestStreak, streak),
+      lastGoalHitDay: getStreamDayKey(input.at, config),
+    }
+  }
+  return next
+}
+
+/** Resolve a session that has ended: break the streak if its goal was never met, then reset session accumulators. */
+function closeStreamSession(state: SubStreakState): SubStreakState {
+  return {
+    ...state,
+    streak: state.sessionGoalCredited ? state.streak : 0,
+    streamLive: false,
+    offlineSince: null,
+    sessionSubCount: 0,
+    sessionGoalCredited: false,
+  }
+}
+
+/** Convenience view model for the UI/overlay. Reflects the active streak basis. */
 export function getDisplay(state: SubStreakState, config: SubStreakConfig) {
+  if ((config.streakBasis ?? 'day') === 'stream') {
+    return {
+      goalText: `Stream sub goal: ${Math.min(state.sessionSubCount, config.dailyGoalTarget)}/${config.dailyGoalTarget}`,
+      rawCount: state.sessionSubCount,
+      target: config.dailyGoalTarget,
+      goalHitToday: state.sessionGoalCredited,
+      streak: state.streak,
+      longestStreak: state.longestStreak,
+      liveToday: state.streamLive,
+    }
+  }
   return {
     goalText: `Daily sub goal: ${Math.min(state.todaySubCount, config.dailyGoalTarget)}/${config.dailyGoalTarget}`,
     rawCount: state.todaySubCount,

@@ -21,6 +21,10 @@ mod app_state;
 mod overlay;
 mod twitch_session;
 
+/// Set while a real quit (tray → Quit) is in progress so the window's close
+/// handler lets the window close instead of hiding it back to the tray.
+struct Quitting(AtomicBool);
+
 /// Bring the main window back to the foreground.
 fn reveal_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -41,6 +45,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![
             twitch_session::load_native_twitch_session,
             twitch_session::save_native_twitch_session,
@@ -53,6 +58,8 @@ pub fn run() {
             overlay::set_overlay_network_mode,
         ])
         .setup(|app| {
+            app.manage(Quitting(AtomicBool::new(false)));
+
             // ── OBS overlay loopback server ────────────────────────────────
             let overlay_state = overlay::OverlayState::new();
             if let Err(error) = overlay_state.start(false) {
@@ -72,7 +79,12 @@ pub fn run() {
                 .tooltip("SubStreak")
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "open" => reveal_main(app),
-                    "quit" => app.exit(0),
+                    "quit" => {
+                        // Mark a real quit so CloseRequested allows the window to
+                        // close, then exit cleanly.
+                        app.state::<Quitting>().0.store(true, Ordering::Relaxed);
+                        app.exit(0);
+                    }
                     _ => {}
                 })
                 .on_tray_icon_event(|tray, event| {
@@ -99,9 +111,15 @@ pub fn run() {
             move |window, event| {
                 let hidden = match event {
                     WindowEvent::CloseRequested { api, .. } => {
-                        let _ = window.hide();
-                        api.prevent_close();
-                        true
+                        // During a real quit, let the window close so teardown is
+                        // clean; otherwise hide to the tray and keep running.
+                        if window.app_handle().state::<Quitting>().0.load(Ordering::Relaxed) {
+                            false
+                        } else {
+                            let _ = window.hide();
+                            api.prevent_close();
+                            true
+                        }
                     }
                     WindowEvent::Resized(_) => {
                         if window.is_minimized().unwrap_or(false) {

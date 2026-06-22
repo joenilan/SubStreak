@@ -1,5 +1,14 @@
 # SubStreak Patch Notes
 
+## 0.1.5
+
+- New: choose whether your streak counts per **stream** or per **day** — perfect if you don't stream every day. Off days never break your streak in per-stream mode.
+- Goal celebrations: a banner on the overlay and in the app (with an optional sound) the moment you hit your sub goal.
+- Optional reminder if you've been live a while without hitting goal, so a streak never slips by unnoticed.
+- Reconnect grace: a quick drop or restart keeps the same stream and carries your sub count over.
+- Settings moved to their own page with room to breathe, and the window now sizes itself to fit.
+- Quitting from the tray now closes cleanly.
+
 ## 0.1.4
 
 - The daily goal and streak are now separate overlay items you can arrange how you like — stack them, put them side by side, or justify left, center, or right.

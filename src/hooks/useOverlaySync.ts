@@ -22,6 +22,7 @@ export function useOverlaySync(): OverlayUrls {
   const config = useSubStreakStore((s) => s.config)
   const streak = useSubStreakStore((s) => s.streak)
   const overlay = useSubStreakStore((s) => s.overlay)
+  const celebration = useSubStreakStore((s) => s.celebration)
   const [urls, setUrls] = useState<OverlayUrls>({
     overlayUrl: '',
     previewUrl: '',
@@ -78,10 +79,11 @@ export function useOverlaySync(): OverlayUrls {
       streak: view.streak,
       best: view.longestStreak,
       live: view.liveToday,
+      celebrateAt: celebration?.at ?? 0,
       settings: overlay,
     })
     invoke('update_overlay_state', { payload }).catch(() => {})
-  }, [config, streak, overlay])
+  }, [config, streak, overlay, celebration])
 
   return urls
 }

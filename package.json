@@ -1,7 +1,7 @@
 {
   "name": "substreak",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
@@ -27,6 +27,7 @@
     "@fontsource/saira": "^5.2.11",
     "@fontsource/saira-condensed": "^5.2.8",
     "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-process": "^2.0.1",
     "@tauri-apps/plugin-updater": "^2.3.0",

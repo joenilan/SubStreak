@@ -8,11 +8,14 @@ import { useTwitchStore } from './state/useTwitchStore'
 import { useTwitchAuth } from './hooks/useTwitchAuth'
 import { useEventSub } from './hooks/useEventSub'
 import { useOverlaySync } from './hooks/useOverlaySync'
+import { useStreakNudge } from './hooks/useStreakNudge'
 import { GoalView } from './views/GoalView'
 import { OverlayView } from './views/OverlayView'
+import { SettingsView } from './views/SettingsView'
 import { UpdateStatus } from './components/UpdateStatus'
+import { CelebrationBanner } from './components/CelebrationBanner'
 
-type View = 'goal' | 'overlay'
+type View = 'goal' | 'overlay' | 'settings'
 
 export function App() {
   const config = useSubStreakStore((s) => s.config)
@@ -22,10 +25,23 @@ export function App() {
   const auth = useTwitchAuth()
   useEventSub()
   const overlayUrls = useOverlaySync()
+  useStreakNudge()
   const twitchConnected = useTwitchStore((s) => s.status === 'connected')
 
   const [activeView, setActiveView] = useState<View>('goal')
+  // Remember where we came from so the gear can toggle back out of settings.
+  const [prevView, setPrevView] = useState<'goal' | 'overlay'>('goal')
   useViewWindowSize(activeView)
+
+  const openSettings = () => {
+    if (activeView !== 'settings') setPrevView(activeView)
+    setActiveView('settings')
+  }
+  const leaveSettings = () => setActiveView(prevView)
+  const goToView = (v: 'goal' | 'overlay') => {
+    setPrevView(v)
+    setActiveView(v)
+  }
 
   useEffect(() => {
     tick()
@@ -42,8 +58,8 @@ export function App() {
           <span className="titlebar__name">SUBSTREAK</span>
         </div>
         <nav className="tabs">
-          <button className={activeView === 'goal' ? 'on' : ''} onClick={() => setActiveView('goal')}>Goal</button>
-          <button className={activeView === 'overlay' ? 'on' : ''} onClick={() => setActiveView('overlay')}>Overlay</button>
+          <button className={activeView === 'goal' ? 'on' : ''} onClick={() => goToView('goal')}>Goal</button>
+          <button className={activeView === 'overlay' ? 'on' : ''} onClick={() => goToView('overlay')}>Overlay</button>
         </nav>
         <div className="titlebar__status" data-tauri-drag-region>
           <span className={`pip ${view.liveToday ? 'pip--live' : twitchConnected ? 'pip--idle' : ''}`} />
@@ -64,7 +80,13 @@ export function App() {
 
       <main className="content">
         <div className="view">
-          {activeView === 'goal' ? <GoalView auth={auth} /> : <OverlayView {...overlayUrls} />}
+          {activeView === 'goal' ? (
+            <GoalView auth={auth} onOpenSettings={openSettings} />
+          ) : activeView === 'overlay' ? (
+            <OverlayView {...overlayUrls} />
+          ) : (
+            <SettingsView onBack={leaveSettings} />
+          )}
         </div>
       </main>
 
@@ -72,6 +94,8 @@ export function App() {
         <UpdateStatus />
         <span>Runs in the system tray</span>
       </footer>
+
+      <CelebrationBanner />
     </div>
   )
 }

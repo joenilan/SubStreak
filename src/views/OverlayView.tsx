@@ -45,6 +45,8 @@ export function OverlayView({ overlayUrl, previewUrl, lanUrl, lanAccessEnabled }
   const duplicateElement = useSubStreakStore((s) => s.duplicateElement)
   const removeElement = useSubStreakStore((s) => s.removeElement)
   const resetOverlay = useSubStreakStore((s) => s.resetOverlay)
+  const celebration = useSubStreakStore((s) => s.celebration)
+  const celebrate = useSubStreakStore((s) => s.celebrate)
 
   const resolution = overlay.resolution ?? { width: 1920, height: 1080 }
   const group = overlay.group
@@ -207,7 +209,10 @@ export function OverlayView({ overlayUrl, previewUrl, lanUrl, lanAccessEnabled }
     <div className="overlayview">
       <div className="sectionhead">
         <h1>Overlay</h1>
-        <button className="btn btn--ghost" onClick={resetOverlay}>Reset</button>
+        <span className="sectionhead__actions">
+          <button className="btn btn--ghost btn--sm" onClick={() => celebrate()}>Test goal</button>
+          <button className="btn btn--ghost" onClick={resetOverlay}>Reset</button>
+        </span>
       </div>
 
       <div className="ovcanvas-wrap" ref={wrapRef}>
@@ -230,6 +235,7 @@ export function OverlayView({ overlayUrl, previewUrl, lanUrl, lanAccessEnabled }
               interactive
               selectedId={selectedId}
               groupSelected={group.grouped}
+              celebrateAt={celebration?.at}
               onGroupPointerDown={onGroupPointerDown}
               onElementPointerDown={onElementPointerDown}
             />

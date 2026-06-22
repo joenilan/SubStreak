@@ -39,6 +39,7 @@ export const SUBSTREAK_SUBSCRIPTIONS: ReadonlyArray<Omit<EventSubSubscriptionReq
   { type: 'channel.subscription.gift', version: '1' },
   { type: 'channel.subscription.message', version: '1' },
   { type: 'stream.online', version: '1' },
+  { type: 'stream.offline', version: '1' },
 ]
 
 export function buildSubscriptionRequests(broadcasterUserId: string): EventSubSubscriptionRequest[] {

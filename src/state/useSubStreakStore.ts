@@ -25,12 +25,22 @@ import {
 type IngestInput =
   | { kind: 'sub'; count?: number; at?: Date }
   | { kind: 'stream-online'; at?: Date }
+  | { kind: 'stream-offline'; at?: Date }
   | { kind: 'tick'; at?: Date }
+
+/** Transient goal-hit signal (not persisted). Bumped whenever the streak grows. */
+export interface Celebration {
+  at: number
+  streak: number
+}
 
 interface SubStreakStore {
   config: SubStreakConfig
   streak: SubStreakState
   overlay: OverlaySettings
+  /** Set when the goal is hit; consumers (app banner, overlay) react to `at` changing. */
+  celebration: Celebration | null
+  celebrate: () => void
   /** Global overlay fields: opacity, resolution, LAN. */
   setOverlay: (patch: Partial<Pick<OverlaySettings, 'opacity' | 'resolution' | 'lanAccessEnabled'>>) => void
   setOverlayGroup: (patch: Partial<OverlayGroup>) => void
@@ -44,9 +54,14 @@ interface SubStreakStore {
   ingest: (input: IngestInput) => void
   /** Roll the day over / finalize without an event (launch + periodic). */
   tick: () => void
+  setStreakBasis: (basis: SubStreakConfig['streakBasis']) => void
+  setReconnectGrace: (minutes: number) => void
+  setCelebrateSound: (on: boolean) => void
+  setNudgeAtRisk: (on: boolean) => void
   // dev/manual controls
   simulateSub: (count?: number) => void
   goLive: () => void
+  goOffline: () => void
   setTarget: (target: number) => void
   setRolloverHour: (hour: number) => void
   hardReset: () => void
@@ -57,6 +72,7 @@ export const useSubStreakStore = create<SubStreakStore>()(
     (set, get) => ({
       config: { ...DEFAULT_CONFIG },
       streak: createInitialState(),
+      celebration: null,
       overlay: cloneOverlay(DEFAULT_OVERLAY),
 
       setOverlay: (patch) =>
@@ -140,14 +156,39 @@ export const useSubStreakStore = create<SubStreakStore>()(
       ingest: (input) => {
         const { config, streak } = get()
         const full = { ...input, at: input.at ?? new Date() } as StreakInput
-        set({ streak: applyInput(streak, full, config) })
+        const next = applyInput(streak, full, config)
+        // The streak only grows when a goal is credited → that's the celebration moment.
+        const celebrated = next.streak > streak.streak
+        set({
+          streak: next,
+          ...(celebrated ? { celebration: { at: Date.now(), streak: next.streak } } : {}),
+        })
       },
+
+      celebrate: () => set({ celebration: { at: Date.now(), streak: get().streak.streak } }),
 
       tick: () => get().ingest({ kind: 'tick' }),
 
       simulateSub: (count = 1) => get().ingest({ kind: 'sub', count }),
 
       goLive: () => get().ingest({ kind: 'stream-online' }),
+
+      goOffline: () => get().ingest({ kind: 'stream-offline' }),
+
+      setStreakBasis: (basis) => {
+        set((s) => ({ config: { ...s.config, streakBasis: basis } }))
+        // Re-evaluate so the display switches to the new basis immediately.
+        get().tick()
+      },
+
+      setReconnectGrace: (minutes) => {
+        set((s) => ({ config: { ...s.config, reconnectGraceMinutes: Math.max(0, Math.round(minutes)) } }))
+        get().tick()
+      },
+
+      setCelebrateSound: (on) => set((s) => ({ config: { ...s.config, celebrateSound: on } })),
+
+      setNudgeAtRisk: (on) => set((s) => ({ config: { ...s.config, nudgeAtRisk: on } })),
 
       setTarget: (target) => {
         set((s) => ({ config: { ...s.config, dailyGoalTarget: Math.max(1, Math.round(target)) } }))

@@ -4,6 +4,7 @@ import type { EventSubEnvelope } from './eventsub'
 export type NormalizedStreakEvent =
   | { messageId: string; input: { kind: 'sub'; count: number } }
   | { messageId: string; input: { kind: 'stream-online' } }
+  | { messageId: string; input: { kind: 'stream-offline' } }
 
 /**
  * Map a raw EventSub notification to a streak input.
@@ -34,6 +35,9 @@ export function normalizeSubEvent(envelope: EventSubEnvelope): NormalizedStreakE
 
     case 'stream.online':
       return { messageId, input: { kind: 'stream-online' } }
+
+    case 'stream.offline':
+      return { messageId, input: { kind: 'stream-offline' } }
 
     default:
       return null

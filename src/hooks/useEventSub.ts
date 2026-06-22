@@ -35,9 +35,10 @@ export function useEventSub() {
 
     const accessToken = () => useTwitchStore.getState().tokens?.accessToken ?? ''
 
-    // If we launched mid-stream, mark today as live right away.
+    // Reconcile live state on launch: mark live if mid-stream, otherwise close
+    // any session that was left "live" in persisted state (we missed the offline).
     void fetchIsLive(TWITCH_CLIENT_ID, accessToken(), userId).then((live) => {
-      if (live) ingest({ kind: 'stream-online' })
+      ingest({ kind: live ? 'stream-online' : 'stream-offline' })
     })
 
     const connect = (url?: string) => {

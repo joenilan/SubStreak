@@ -8,15 +8,13 @@ import { useSubStreakStore } from '../state/useSubStreakStore'
 import { useTwitchStore } from '../state/useTwitchStore'
 import type { TwitchAuthActions } from '../hooks/useTwitchAuth'
 
-export function GoalView({ auth }: { auth: TwitchAuthActions }) {
+export function GoalView({ auth, onOpenSettings }: { auth: TwitchAuthActions; onOpenSettings: () => void }) {
   const { login, cancelLogin, logout } = auth
   const config = useSubStreakStore((s) => s.config)
   const streak = useSubStreakStore((s) => s.streak)
-  const simulateSub = useSubStreakStore((s) => s.simulateSub)
-  const goLive = useSubStreakStore((s) => s.goLive)
   const setTarget = useSubStreakStore((s) => s.setTarget)
-  const setRolloverHour = useSubStreakStore((s) => s.setRolloverHour)
-  const hardReset = useSubStreakStore((s) => s.hardReset)
+
+  const basis = config.streakBasis ?? 'day'
 
   const twitchStatus = useTwitchStore((s) => s.status)
   const session = useTwitchStore((s) => s.session)
@@ -24,7 +22,6 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
   const twitchError = useTwitchStore((s) => s.error)
   const eventSubConnected = useTwitchStore((s) => s.eventSubConnected)
 
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [goalDraft, setGoalDraft] = useState(() => String(config.dailyGoalTarget))
 
   useEffect(() => {
@@ -52,20 +49,15 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
   return (
     <>
       <div className="sectionhead">
-        <h1>Daily sub goal</h1>
-        <button
-          className={`gear ${settingsOpen ? 'gear--on' : ''}`}
-          aria-label="Settings"
-          title="Settings"
-          onClick={() => setSettingsOpen((v) => !v)}
-        >
+        <h1>{basis === 'stream' ? 'Stream sub goal' : 'Daily sub goal'}</h1>
+        <button className="gear" aria-label="Settings" title="Settings" onClick={onOpenSettings}>
           <Settings size={17} />
         </button>
       </div>
 
       <div className="stats">
         <section className={`stat ${view.goalHitToday ? 'stat--met' : ''}`}>
-          <div className="stat__label">Today</div>
+          <div className="stat__label">{basis === 'stream' ? 'This stream' : 'Today'}</div>
           <div className="stat__figure">
             <span className="stat__num">{Math.min(view.rawCount, view.target)}</span>
             <span className="stat__den">/{view.target}</span>
@@ -80,7 +72,11 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
           <div className="stat__label">Streak</div>
           <div className="stat__figure">
             <span className="stat__num">{view.streak}</span>
-            <span className="stat__unit">{view.streak === 1 ? 'day' : 'days'}</span>
+            <span className="stat__unit">
+              {basis === 'stream'
+                ? view.streak === 1 ? 'stream' : 'streams'
+                : view.streak === 1 ? 'day' : 'days'}
+            </span>
           </div>
           <div className="stat__cap">Best {view.longestStreak}</div>
         </section>
@@ -137,43 +133,11 @@ export function GoalView({ auth }: { auth: TwitchAuthActions }) {
                 if (!goalDraft || Number(goalDraft) < 1) setGoalDraft(String(config.dailyGoalTarget))
               }}
             />
-            <span className="row__hint">{config.dailyGoalTarget === 1 ? 'sub' : 'subs'} / day</span>
+            <span className="row__hint">{config.dailyGoalTarget === 1 ? 'sub' : 'subs'} / {basis === 'stream' ? 'stream' : 'day'}</span>
           </span>
           <span className="row__action" />
         </div>
       </section>
-
-      {settingsOpen && (
-        <Modal title="Settings" onClose={() => setSettingsOpen(false)}>
-          <div className="field-group">
-            <label className="field-group__label">New day at</label>
-            <span className="select select--full">
-              <select value={config.dayRolloverHour} onChange={(e) => setRolloverHour(Number(e.target.value))}>
-                {Array.from({ length: 24 }, (_, h) => (
-                  <option key={h} value={h}>{h === 0 ? 'Midnight' : `${h}:00`}</option>
-                ))}
-              </select>
-            </span>
-            <p className="modal__hint">
-              When a new day starts — today resets to 0 and a fresh streak day begins.
-              Set it after midnight if you stream past 12am, so a late session counts as one day.
-            </p>
-          </div>
-
-          <div className="field-group">
-            <label className="field-group__label">Test events</label>
-            <div className="btn-group">
-              <button className="btn btn--ghost" onClick={() => goLive()}>Go live</button>
-              <button className="btn btn--ghost" onClick={() => simulateSub(1)}>+1 sub</button>
-              <button className="btn btn--ghost" onClick={() => simulateSub(5)}>+5 gift</button>
-            </div>
-          </div>
-
-          <button className="btn btn--danger btn--full" onClick={() => hardReset()}>
-            Reset all progress
-          </button>
-        </Modal>
-      )}
 
       {deviceFlow && twitchStatus === 'authorizing' && (
         <Modal title="Connect Twitch" onClose={cancelLogin}>
