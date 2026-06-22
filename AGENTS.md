@@ -41,8 +41,10 @@ The Tauri updater only accepts an update whose `updater.json` signature was prod
 
 `scripts/publish-release.mjs` merges env from the parent `.env.raspi` first, then the local `.env`, then `process.env`. The parent file points `TAURI_SIGNING_PRIVATE_KEY_PATH` at `subathon-timer.key` (a different app's key), so if the local `.env` override does not win, releases get signed with the wrong key. This shipped broken in 0.1.3.
 
+The local `.env` sets `TAURI_SIGNING_PRIVATE_KEY_PATH` to `substreak.key` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` to empty (that key has no password). `publish-release.mjs` now re-pins both of those vars from the local `.env` *after* the merge, so an inherited `TAURI_SIGNING_*` in `process.env` (e.g. the parent app's `subathon-timer.key` + its password, left over from a prior shell) can no longer win and mis-sign. So `bun run release:publish` just works — no manual env override needed.
+
 When publishing SubStreak:
 
-- Force the correct key: run with `TAURI_SIGNING_PRIVATE_KEY_PATH` set to the `substreak.key` path (`process.env` wins the merge), or ensure the local `.env` sets it.
-- The publish script now aborts before upload if the installer's signing key id does not match `tauri.conf.json`'s `pubkey` — do not bypass that guard; fix the key instead.
+- Don't set `TAURI_SIGNING_PRIVATE_KEY_PATH` / `_PASSWORD` by hand; let the local `.env` drive them. If you must override (CI), edit the local `.env` rather than relying on shell env, since the script intentionally ignores `process.env` for these two vars.
+- The publish script aborts before upload if the installer's signing key id does not match `tauri.conf.json`'s `pubkey` — do not bypass that guard; fix the key instead.
 - Never swap `tauri.conf.json`'s `pubkey` to "match" a stray signing key: installed apps verify against the pubkey they were built with, so changing it orphans every existing install.

@@ -15,10 +15,23 @@ const patchNotesSource = readFileSync(resolve(appRoot, 'PATCH_NOTES.md'), 'utf8'
 const sharedEnvFile = process.env.RPI_ENV_FILE ?? resolve(parentRepoRoot, '.env.raspi')
 const localEnvFile = resolve(appRoot, '.env')
 
+const localEnv = existsSync(localEnvFile) ? loadEnvFile(localEnvFile) : {}
+
 const env = {
   ...(existsSync(sharedEnvFile) ? loadEnvFile(sharedEnvFile) : {}),
-  ...(existsSync(localEnvFile) ? loadEnvFile(localEnvFile) : {}),
+  ...localEnv,
   ...process.env,
+}
+
+// The signing key + password are SubStreak-specific and intentionally live in the
+// local .env (substreak.key, empty password). The shell's process.env often carries
+// the *parent* app's TAURI_SIGNING_* (subathon-timer.key + its password) from a prior
+// session, and process.env wins the merge above — which silently signs with the wrong
+// key, or fails with "Wrong password for that key" after a full build. So for these two
+// vars only, the local .env is authoritative; a stray inherited value can never win.
+// (Other vars like SSH creds still let process.env override, for CI flexibility.)
+for (const key of ['TAURI_SIGNING_PRIVATE_KEY_PATH', 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD']) {
+  if (key in localEnv) env[key] = localEnv[key]
 }
 
 const host = requiredEnv(env, 'SSH_HOST')
