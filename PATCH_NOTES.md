@@ -1,5 +1,9 @@
 # SubStreak Patch Notes
 
+## 0.1.6
+
+- The OBS overlay now runs on a fixed port (17432) instead of a random one, so your OBS browser-source URL stays the same across app restarts and when switching between loopback and Dual PC / LAN mode.
+
 ## 0.1.5
 
 - New: choose whether your streak counts per **stream** or per **day** — perfect if you don't stream every day. Off days never break your streak in per-stream mode.

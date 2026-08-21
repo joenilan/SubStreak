@@ -1,6 +1,6 @@
 [package]
 name = "substreak"
-version = "0.1.5"
+version = "0.1.6"
 description = "Set-and-forget Twitch daily sub goal + streak"
 authors = ["dreadedzombie"]
 edition = "2021"

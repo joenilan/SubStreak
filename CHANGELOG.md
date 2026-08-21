@@ -1,5 +1,10 @@
 # SubStreak Changelog
 
+## 0.1.6
+
+- The overlay HTTP server now binds a fixed port (17432) instead of an ephemeral one, so the OBS browser-source URL survives app restarts and loopback/LAN mode switches.
+- Added a brief rebind retry for the stable port so switching network modes doesn't fail while the previous async listener is still being torn down.
+
 ## 0.1.5
 
 - Added a configurable streak basis (`day` or `stream`) in the engine and config; engine defaults to `day`, app default config is `stream`. Per-stream sessions credit the streak on goal-hit and only break when a streamed session ends under goal.
