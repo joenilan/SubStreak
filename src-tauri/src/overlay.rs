@@ -5,8 +5,10 @@
 // `/` and that payload at `/state`. OBS points a browser source at the URL
 // reported by `get_overlay_url`.
 
+use std::io;
 use std::net::{IpAddr, TcpListener as StdTcpListener};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use axum::{
     http::header,
@@ -16,6 +18,10 @@ use axum::{
 };
 use serde::Serialize;
 use tauri::async_runtime::JoinHandle;
+
+const OVERLAY_PORT: u16 = 17432;
+const REBIND_ATTEMPTS: usize = 25;
+const REBIND_DELAY: Duration = Duration::from_millis(10);
 
 #[derive(Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,7 +57,7 @@ impl OverlayState {
 
         let (listener, urls) = bind(lan_enabled).map_err(|error| {
             let mode = if lan_enabled { "LAN" } else { "loopback" };
-            format!("failed to start {mode} overlay server: {error}")
+            format!("failed to start {mode} overlay server on port {OVERLAY_PORT}: {error}")
         })?;
 
         if let Ok(mut guard) = self.urls.lock() {
@@ -101,11 +107,12 @@ pub fn set_overlay_network_mode(
     state.start(lan_enabled)
 }
 
-/// Bind a port synchronously and return it with URLs, so the caller can report
-/// the OBS source URL immediately. The listener is served on the async runtime.
-fn bind(lan_enabled: bool) -> std::io::Result<(StdTcpListener, OverlayUrls)> {
+/// Bind the stable overlay port synchronously and return it with URLs, so the
+/// caller can report the OBS source URL immediately. The listener is served on
+/// the async runtime.
+fn bind(lan_enabled: bool) -> io::Result<(StdTcpListener, OverlayUrls)> {
     let host = if lan_enabled { "0.0.0.0" } else { "127.0.0.1" };
-    let listener = StdTcpListener::bind((host, 0))?;
+    let listener = bind_overlay_listener(host)?;
     listener.set_nonblocking(true)?;
     let port = listener.local_addr()?.port();
     let preview_url = format!("http://127.0.0.1:{port}/");
@@ -124,6 +131,27 @@ fn bind(lan_enabled: bool) -> std::io::Result<(StdTcpListener, OverlayUrls)> {
             lan_access_enabled: lan_enabled,
         },
     ))
+}
+
+/// Switching between loopback and LAN aborts the existing async server first,
+/// but the runtime may need a moment to drop its listener. Retry only address-
+/// in-use failures briefly so the stable port can be rebound without making
+/// the user change the OBS browser-source URL.
+fn bind_overlay_listener(host: &str) -> io::Result<StdTcpListener> {
+    for attempt in 0..REBIND_ATTEMPTS {
+        match StdTcpListener::bind((host, OVERLAY_PORT)) {
+            Ok(listener) => return Ok(listener),
+            Err(error)
+                if error.kind() == io::ErrorKind::AddrInUse
+                    && attempt + 1 < REBIND_ATTEMPTS =>
+            {
+                std::thread::sleep(REBIND_DELAY);
+            }
+            Err(error) => return Err(error),
+        }
+    }
+
+    unreachable!("the final bind attempt always returns")
 }
 
 fn resolve_lan_url(port: u16) -> Option<String> {
